@@ -181,7 +181,7 @@ class _CalendarPageState extends State<CalendarPage> {
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: ValueListenableBuilder<bool>(
-                valueListenable: ZsebtunApp.oldRoomsNotifier,
+                valueListenable: ZsebtunApp.newRoomsNotifier,
                 builder: (context, useNewRooms, child) {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
@@ -457,7 +457,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               )
                   : ValueListenableBuilder<bool>(
-                  valueListenable: ZsebtunApp.oldRoomsNotifier,
+                  valueListenable: ZsebtunApp.newRoomsNotifier,
                   builder: (context, useNewRooms, child) {
                     return ListView.separated(
                       padding: const EdgeInsets.all(20),

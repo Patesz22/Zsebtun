@@ -57,7 +57,7 @@ class ZsebtunApp extends StatelessWidget {
   const ZsebtunApp({super.key, required this.isDark, required this.initialLang, required this.oldRooms});
 
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
-  static final ValueNotifier<bool> oldRoomsNotifier = ValueNotifier(true);
+  static final ValueNotifier<bool> newRoomsNotifier = ValueNotifier(true);
   static late ValueNotifier<String> languageNotifier;
 
   /// @description Formats the currently selected language into a locale string required by the intl package.
@@ -67,7 +67,7 @@ class ZsebtunApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
-    oldRoomsNotifier.value = oldRooms;
+    newRoomsNotifier.value = oldRooms;
     languageNotifier = ValueNotifier(initialLang);
 
     return ValueListenableBuilder<String>(

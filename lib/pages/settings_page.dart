@@ -71,7 +71,7 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: 12),
 
           ValueListenableBuilder<bool>(
-              valueListenable: ZsebtunApp.oldRoomsNotifier,
+              valueListenable: ZsebtunApp.newRoomsNotifier,
               builder: (context, useNewRooms, child) {
                 return SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -90,7 +90,7 @@ class SettingsPage extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   tileColor: theme.colorScheme.surfaceContainerLowest,
                   onChanged: (value) async {
-                    ZsebtunApp.oldRoomsNotifier.value = value;
+                    ZsebtunApp.newRoomsNotifier.value = value;
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setBool('oldRooms', value);
                   },

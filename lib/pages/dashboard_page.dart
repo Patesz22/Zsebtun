@@ -22,10 +22,15 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  int _selectedIndex = 0;
   List<Map<String, dynamic>> _allEvents = [];
   List<Map<String, dynamic>> _todayEvents = [];
-  Map<String, dynamic>? _nextEvent;
-  int _remainingClasses = 0;
+
+  Map<String, dynamic>? _currentClass;
+  Map<String, dynamic>? _nextClass;
+
+  int _totalClasses = 0;
+  int _finishedClasses = 0;
   bool _isLoading = true;
   Timer? _minuteTimer;
 
@@ -36,7 +41,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     // Update the UI every minute to keep the "starts in X mins" accurate
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) _calculateNextClass();
+      if (mounted) _calculateClasses();
     });
   }
 
@@ -64,7 +69,7 @@ class _DashboardPageState extends State<DashboardPage> {
       return dt.year == now.year && dt.month == now.month && dt.day == now.day;
     }).toList();
 
-    _calculateNextClass();
+    _calculateClasses();
 
     if (mounted) {
       setState(() {
@@ -97,28 +102,29 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  /// @description Iterates through today's classes to find the next upcoming event
-  /// based on the current device time and calculates the remaining class count.
-  void _calculateNextClass() {
+  /// @description Evaluates today's classes to identify the currently running class,
+  /// the next upcoming class, and tallies finished vs. total classes.
+  void _calculateClasses() {
     final now = DateTime.now();
-    _nextEvent = null;
-    int remainingCount = 0;
+    _currentClass = null;
+    _nextClass = null;
+    _finishedClasses = 0;
+    _totalClasses = _todayEvents.length;
 
     for (var event in _todayEvents) {
       final startTime = event['dtstart'] as DateTime;
       final endTime = event['dtend'] as DateTime;
 
-      if (endTime.isAfter(now)) {
-        if (_nextEvent == null && startTime.isAfter(now)) {
-          _nextEvent = event;
-        }
-        remainingCount++;
+      if (now.isAfter(endTime)) {
+        _finishedClasses++;
+      } else if (now.isAfter(startTime) && now.isBefore(endTime)) {
+        _currentClass = event;
+      } else if (now.isBefore(startTime) && _nextClass == null) {
+        _nextClass = event;
       }
     }
 
-    setState(() {
-      _remainingClasses = remainingCount;
-    });
+    setState(() {});
   }
 
   /// @description Generates a time-appropriate greeting (morning, afternoon, evening).
@@ -150,11 +156,11 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final now = DateTime.now();
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
+      appBar: _selectedIndex == 0
+          ? AppBar(
         title: Text(t('dashboard'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
         backgroundColor: theme.colorScheme.surface,
         scrolledUnderElevation: 0,
@@ -165,128 +171,114 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(width: 8),
         ],
-      ),
+      )
+          : null,
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
-          : RefreshIndicator(
-        onRefresh: () async {
-          setState(() => _isLoading = true);
-          await _fetchAndSyncCalendar();
+          : IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _buildDashboardContent(theme, isDark),
+          CalendarPage(preloadedEvents: _allEvents),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (int index) {
+          setState(() {
+            _selectedIndex = index;
+          });
         },
-        color: theme.colorScheme.primary,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(
-              _getGreeting(),
-              style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat(t('date_format'), ZsebtunApp.localeString).format(now),
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
-            ),
-            const SizedBox(height: 32),
-
-            Text(
-              t('next_class').toUpperCase(),
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.primary),
-            ),
-            const SizedBox(height: 12),
-            ValueListenableBuilder<bool>(
-                valueListenable: ZsebtunApp.oldRoomsNotifier,
-                builder: (context, useNewRooms, child) {
-                  return _buildNextClassCard(theme, isDark, useNewRooms);
-                }
-            ),
-
-            const SizedBox(height: 24),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatBox(
-                    theme: theme,
-                    title: t('classes_today'),
-                    value: _todayEvents.length.toString(),
-                    icon: Icons.calendar_today_rounded,
-                    color: theme.colorScheme.secondaryContainer,
-                    onColor: theme.colorScheme.onSecondaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatBox(
-                    theme: theme,
-                    title: t('remaining'),
-                    value: _remainingClasses.toString(),
-                    icon: Icons.pending_actions_rounded,
-                    color: theme.colorScheme.tertiaryContainer,
-                    onColor: theme.colorScheme.onTertiaryContainer,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            InkWell(
-              onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => CalendarPage(preloadedEvents: _allEvents))
-              ),
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.date_range_rounded, color: theme.colorScheme.primary),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            t('open_calendar'),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            t('ready_for_day'),
-                            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        backgroundColor: theme.colorScheme.surfaceContainer,
+        indicatorColor: theme.colorScheme.primaryContainer,
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard_rounded, color: theme.colorScheme.onPrimaryContainer),
+            label: t('dashboard'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month_rounded, color: theme.colorScheme.onPrimaryContainer),
+            label: t('title'),
+          ),
+        ],
       ),
     );
   }
 
-  /// @description Builds the hero card displaying information about the user's next immediate class.
+  /// @description Renders the dashboard list view containing the hero card and stat boxes.
+  Widget _buildDashboardContent(ThemeData theme, bool isDark) {
+    final now = DateTime.now();
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(() => _isLoading = true);
+        await _fetchAndSyncCalendar();
+      },
+      color: theme.colorScheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Text(
+            _getGreeting(),
+            style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            DateFormat(t('date_format'), ZsebtunApp.localeString).format(now),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
+          ),
+          const SizedBox(height: 32),
+
+          Text(
+            t('next_class').toUpperCase(),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(height: 12),
+          ValueListenableBuilder<bool>(
+              valueListenable: ZsebtunApp.newRoomsNotifier,
+              builder: (context, useNewRooms, child) {
+                return _buildHeroCard(theme, isDark, useNewRooms);
+              }
+          ),
+
+          const SizedBox(height: 24),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatBox(
+                  theme: theme,
+                  title: t('classes_today'),
+                  value: '$_finishedClasses / $_totalClasses',
+                  icon: Icons.done_all_rounded,
+                  color: theme.colorScheme.secondaryContainer,
+                  onColor: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildRightStatBox(theme, isDark),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// @description Builds the hero card displaying either the currently running class in green,
+  /// or the next immediate class in the primary theme color.
   /// @param theme The current ThemeData context.
   /// @param isDark Boolean indicating if dark mode is active to adjust shadows.
   /// @param useNewRooms Boolean indicating if the user prefers raw unformatted room names.
   /// @returns A styled Container widget.
-  Widget _buildNextClassCard(ThemeData theme, bool isDark, bool useNewRooms) {
-    if (_nextEvent == null) {
+  Widget _buildHeroCard(ThemeData theme, bool isDark, bool useNewRooms) {
+    final isRunning = _currentClass != null;
+    final heroEvent = _currentClass ?? _nextClass;
+
+    if (heroEvent == null) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(32),
@@ -308,29 +300,38 @@ class _DashboardPageState extends State<DashboardPage> {
       );
     }
 
-    final startTime = _nextEvent!['dtstart'] as DateTime;
-    final className = _nextEvent!['className'] ?? t('unknown_class');
-    final roomsList = _nextEvent!['rooms'] as List<dynamic>? ?? [];
+    final startTime = heroEvent['dtstart'] as DateTime;
+    final endTime = heroEvent['dtend'] as DateTime;
+    final className = heroEvent['className'] ?? t('unknown_class');
+    final roomsList = heroEvent['rooms'] as List<dynamic>? ?? [];
 
     final location = roomsList.isNotEmpty
-        ? roomsList.map((r) => useNewRooms ? r['raw'].toString() : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+        ? roomsList.map((r) => useNewRooms
+        ? r['raw'].toString()
+        : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
         : t('unknown_room');
 
-    final classType = _nextEvent!['classType']?.toString() ?? '';
+    final classType = heroEvent['classType']?.toString() ?? '';
+
+    final gradientColors = isRunning
+        ? [Colors.green.shade600, Colors.green.shade400]
+        : [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)];
+
+    final shadowColor = isRunning ? Colors.green : theme.colorScheme.primary;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.2 : 0.4),
+            color: shadowColor.withValues(alpha: isDark ? 0.2 : 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -345,24 +346,24 @@ class _DashboardPageState extends State<DashboardPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onPrimary.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.timer_outlined, size: 14, color: theme.colorScheme.onPrimary),
+                    Icon(isRunning ? Icons.play_arrow_rounded : Icons.timer_outlined, size: 14, color: Colors.white),
                     const SizedBox(width: 6),
                     Text(
-                      '${t('starts_in')} ${_getTimeUntil(startTime)}',
-                      style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                      isRunning ? 'Most!' : '${t('starts_in')} ${_getTimeUntil(startTime)}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ],
                 ),
               ),
               Text(
-                DateFormat('HH:mm').format(startTime),
-                style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.w800, fontSize: 18),
+                '${DateFormat('HH:mm').format(startTime)} - ${DateFormat('HH:mm').format(endTime)}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
               ),
             ],
           ),
@@ -372,32 +373,75 @@ class _DashboardPageState extends State<DashboardPage> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                   classType,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimary, letterSpacing: 0.5)
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)
               ),
             ),
           Text(
             className,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimary, height: 1.2),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, height: 1.2),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.location_on, size: 16, color: theme.colorScheme.onPrimary.withValues(alpha: 0.8)),
+              Icon(Icons.location_on, size: 16, color: Colors.white.withValues(alpha: 0.8)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   location,
-                  style: TextStyle(fontSize: 14, color: theme.colorScheme.onPrimary.withValues(alpha: 0.9), fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w500),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// @description Builds the right stat box that constantly tracks the next upcoming class.
+  Widget _buildRightStatBox(ThemeData theme, bool isDark) {
+    if (_nextClass == null) {
+      return _buildStatBox(
+        theme: theme,
+        title: t('no_more_classes'),
+        value: '-',
+        icon: Icons.fast_forward_rounded,
+        color: theme.colorScheme.tertiaryContainer,
+        onColor: theme.colorScheme.onTertiaryContainer,
+      );
+    }
+
+    final startTime = _nextClass!['dtstart'] as DateTime;
+    final className = _nextClass!['className'] ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.fast_forward_rounded, color: theme.colorScheme.onTertiaryContainer),
+          const SizedBox(height: 16),
+          Text(
+            DateFormat('HH:mm').format(startTime),
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: theme.colorScheme.onTertiaryContainer),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            className,
+            style: TextStyle(fontSize: 13, color: theme.colorScheme.onTertiaryContainer.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
