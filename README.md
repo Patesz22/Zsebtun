@@ -20,7 +20,7 @@
 
 | Dashboard | Calendar View | Class Details | Settings |
 | :---: | :---: | :---: | :---: |
-| <img src="placeholder.png" width="200"/> | <img src="placeholder.png" width="200"/> | <img src="placeholder.png" width="200"/> | <img src="placeholder.png" width="200"/> |
+| <img src="img/en/Sc_dashboard.jpg" width="200"/> | <img src="img/en/Sc_calendar.jpg" width="200"/> | <img src="img/en/Sc_details.jpg" width="200"/> | <img src="img/en/Sc_settings.jpg" width="200"/> |
 
 ## Getting Started
 
