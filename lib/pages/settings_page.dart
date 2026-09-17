@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../database/db_helper.dart';
 import 'setup_page.dart';
+import '../services/github_update_service.dart';
 
 /// @description A dedicated page for user preferences, allowing them to toggle
 /// dark mode, change the application language, or log out by clearing their saved Neptun link.
@@ -57,7 +58,7 @@ class SettingsPage extends StatelessWidget {
                     child: Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: theme.colorScheme.onPrimaryContainer),
                   ),
                   value: isDark,
-                  activeColor: theme.colorScheme.primary,
+                  activeThumbColor: theme.colorScheme.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   tileColor: theme.colorScheme.surfaceContainerLowest,
                   onChanged: (value) async {
@@ -86,7 +87,7 @@ class SettingsPage extends StatelessWidget {
                     child: Icon(Icons.meeting_room_rounded, color: theme.colorScheme.onTertiaryContainer),
                   ),
                   value: useNewRooms,
-                  activeColor: theme.colorScheme.primary,
+                  activeThumbColor: theme.colorScheme.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   tileColor: theme.colorScheme.surfaceContainerLowest,
                   onChanged: (value) async {
@@ -136,6 +137,27 @@ class SettingsPage extends StatelessWidget {
                   );
                 }
             ),
+          ),
+          const SizedBox(height: 12),
+
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: theme.colorScheme.surfaceContainerLowest,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.system_update_rounded, color: theme.colorScheme.onPrimaryContainer),
+            ),
+            title: Text(tr('check_updates'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            trailing: Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('checking_updates'))));
+              GithubUpdateService.checkForUpdates(context, showUpToDateMessage: true);
+            },
           ),
           const SizedBox(height: 32),
 

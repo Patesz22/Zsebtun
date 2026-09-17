@@ -35,7 +35,16 @@
     "open_calendar": "Open Full Calendar",
     "ready_for_day": "Ready to crush the day?",
     "use_new_rooms": "New Room Format",
-    "use_new_rooms_desc": "Display the new room names (e.g., I-B-F-28)"
+    "use_new_rooms_desc": "Display the new room names (e.g., I-B-F-28)",
+    "update_available": "Update Available!",
+    "update_desc": "Version {v} is available. Do you want to view the release page?",
+    "update_now": "View Release",
+    "later": "Later",
+    "checking_updates": "Checking for updates...",
+    "up_to_date": "App is up to date",
+    "update_error": "Failed to check for updates",
+    "downloading": "Opening browser...",
+    "check_updates": "Check for Updates"
   },
   "hu": {
     "title": "Órarendem",
@@ -73,6 +82,15 @@
     "open_calendar": "Teljes naptár megnyitása",
     "ready_for_day": "Készen állsz a mai napra?",
     "use_new_rooms": "Új teremformátum",
-    "use_new_rooms_desc": "Új terem nevek mutatása (pl. I-B-F-28)"
+    "use_new_rooms_desc": "Új terem nevek mutatása (pl. I-B-F-28)",
+    "update_available": "Frissítés elérhető!",
+    "update_desc": "A(z) {v} verzió elérhető. Szeretnéd megtekinteni a letöltési oldalt?",
+    "update_now": "Kiadás megtekintése",
+    "later": "Később",
+    "checking_updates": "Frissítések keresése...",
+    "up_to_date": "Az alkalmazás naprakész",
+    "update_error": "Hiba a frissítések keresésekor",
+    "downloading": "Böngésző megnyitása...",
+    "check_updates": "Frissítések keresése"
   }
 }

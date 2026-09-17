@@ -72,10 +72,10 @@ class ZsebtunApp extends StatelessWidget {
 
     return ValueListenableBuilder<String>(
       valueListenable: languageNotifier,
-      builder: (_, String currentLang, __) {
+      builder: (_, String currentLang, _) {
         return ValueListenableBuilder<ThemeMode>(
           valueListenable: themeNotifier,
-          builder: (_, ThemeMode currentMode, __) {
+          builder: (_, ThemeMode currentMode, _) {
             return MaterialApp(
               title: 'Zsebtun',
               debugShowCheckedModeBanner: false,
