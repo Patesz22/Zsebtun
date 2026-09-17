@@ -10,6 +10,7 @@ import '../database/db_helper.dart';
 import '../services/ics_parser_service.dart';
 import 'calendar_page.dart';
 import 'settings_page.dart';
+import '../services/room_formatter_service.dart';
 
 /// @description The main landing page of the application displaying current day statistics,
 /// a dynamic greeting, and an actively counting down hero card for the next upcoming class.
@@ -192,7 +193,12 @@ class _DashboardPageState extends State<DashboardPage> {
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.primary),
             ),
             const SizedBox(height: 12),
-            _buildNextClassCard(theme, isDark),
+            ValueListenableBuilder<bool>(
+                valueListenable: ZsebtunApp.oldRoomsNotifier,
+                builder: (context, useNewRooms, child) {
+                  return _buildNextClassCard(theme, isDark, useNewRooms);
+                }
+            ),
 
             const SizedBox(height: 24),
 
@@ -234,7 +240,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -277,8 +283,9 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @description Builds the hero card displaying information about the user's next immediate class.
   /// @param theme The current ThemeData context.
   /// @param isDark Boolean indicating if dark mode is active to adjust shadows.
+  /// @param useNewRooms Boolean indicating if the user prefers raw unformatted room names.
   /// @returns A styled Container widget.
-  Widget _buildNextClassCard(ThemeData theme, bool isDark) {
+  Widget _buildNextClassCard(ThemeData theme, bool isDark, bool useNewRooms) {
     if (_nextEvent == null) {
       return Container(
         width: double.infinity,
@@ -286,11 +293,11 @@ class _DashboardPageState extends State<DashboardPage> {
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
         ),
         child: Column(
           children: [
-            Icon(Icons.done_all_rounded, size: 64, color: theme.colorScheme.primary.withOpacity(0.5)),
+            Icon(Icons.done_all_rounded, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               t('no_more_classes'),
@@ -304,7 +311,11 @@ class _DashboardPageState extends State<DashboardPage> {
     final startTime = _nextEvent!['dtstart'] as DateTime;
     final className = _nextEvent!['className'] ?? t('unknown_class');
     final roomsList = _nextEvent!['rooms'] as List<dynamic>? ?? [];
-    final location = roomsList.isNotEmpty ? roomsList.map((r) => r['raw']).join(', ') : t('unknown_room');
+
+    final location = roomsList.isNotEmpty
+        ? roomsList.map((r) => useNewRooms ? r['raw'].toString() : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+        : t('unknown_room');
+
     final classType = _nextEvent!['classType']?.toString() ?? '';
 
     return Container(
@@ -312,14 +323,14 @@ class _DashboardPageState extends State<DashboardPage> {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.8)],
+          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(isDark ? 0.2 : 0.4),
+            color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.2 : 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -334,7 +345,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onPrimary.withOpacity(0.2),
+                  color: theme.colorScheme.onPrimary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -361,7 +372,7 @@ class _DashboardPageState extends State<DashboardPage> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: theme.colorScheme.onPrimary.withOpacity(0.2),
+                color: theme.colorScheme.onPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -376,12 +387,12 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.location_on, size: 16, color: theme.colorScheme.onPrimary.withOpacity(0.8)),
+              Icon(Icons.location_on, size: 16, color: theme.colorScheme.onPrimary.withValues(alpha: 0.8)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   location,
-                  style: TextStyle(fontSize: 14, color: theme.colorScheme.onPrimary.withOpacity(0.9), fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 14, color: theme.colorScheme.onPrimary.withValues(alpha: 0.9), fontWeight: FontWeight.w500),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -427,7 +438,7 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(fontSize: 13, color: onColor.withOpacity(0.8), fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 13, color: onColor.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
           ),
         ],
       ),

@@ -10,6 +10,7 @@ import 'setup_page.dart';
 import 'settings_page.dart';
 import '../database/db_helper.dart';
 import '../services/ics_parser_service.dart';
+import '../services/room_formatter_service.dart';
 
 /// @description The full schedule view that allows users to navigate through their
 /// classes using a monthly or weekly calendar, and view daily event details.
@@ -127,7 +128,7 @@ class _CalendarPageState extends State<CalendarPage> {
     return _groupedEvents[normalizedDay] ?? [];
   }
 
-  /// @description Handles the calendar view format change (e.g., Daily, Weekly, Monthly).
+  /// @description Handles the calendar view format change (Daily, Weekly, Monthly).
   /// @param newValue The selected view string from the dropdown.
   void _onViewChanged(String? newValue) {
     if (newValue != null) {
@@ -179,70 +180,75 @@ class _CalendarPageState extends State<CalendarPage> {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Text(
-                  className,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (classType.isNotEmpty)
-                      Chip(
-                        label: Text(classType),
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        labelStyle: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 12),
-                        side: BorderSide.none,
+            child: ValueListenableBuilder<bool>(
+                valueListenable: ZsebtunApp.oldRoomsNotifier,
+                builder: (context, useNewRooms, child) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
                       ),
-                    if (eventType.isNotEmpty)
-                      Chip(
-                        label: Text(eventType),
-                        backgroundColor: theme.colorScheme.secondaryContainer,
-                        labelStyle: TextStyle(color: theme.colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold, fontSize: 12),
-                        side: BorderSide.none,
+                      Text(
+                        className,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                _buildDetailRow(theme, Icons.access_time_rounded, '$date\n$startTime - $endTime'),
-                const SizedBox(height: 20),
-                if (roomsList.isNotEmpty)
-                  _buildDetailRow(
-                      theme,
-                      Icons.location_on_rounded,
-                      roomsList.map((r) => '${r['raw']}  •  ${r['floor']}').join('\n')
-                  )
-                else
-                  _buildDetailRow(theme, Icons.location_off_rounded, t('unknown_room')),
-                const SizedBox(height: 20),
-                if (teachers.isNotEmpty)
-                  _buildDetailRow(
-                      theme,
-                      Icons.person_rounded,
-                      teachers.join('\n')
-                  ),
-                const SizedBox(height: 16),
-              ],
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (classType.isNotEmpty)
+                            Chip(
+                              label: Text(classType),
+                              backgroundColor: theme.colorScheme.primaryContainer,
+                              labelStyle: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 12),
+                              side: BorderSide.none,
+                            ),
+                          if (eventType.isNotEmpty)
+                            Chip(
+                              label: Text(eventType),
+                              backgroundColor: theme.colorScheme.secondaryContainer,
+                              labelStyle: TextStyle(color: theme.colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold, fontSize: 12),
+                              side: BorderSide.none,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      _buildDetailRow(theme, Icons.access_time_rounded, '$date\n$startTime - $endTime'),
+                      const SizedBox(height: 20),
+                      if (roomsList.isNotEmpty)
+                        _buildDetailRow(
+                            theme,
+                            Icons.location_on_rounded,
+                            roomsList.map((r) => '${useNewRooms ? r['raw'] : RoomFormatterService.formatRoomName(r['raw'])}  •  ${r['floor']}').join('\n')
+                        )
+                      else
+                        _buildDetailRow(theme, Icons.location_off_rounded, t('unknown_room')),
+                      const SizedBox(height: 20),
+                      if (teachers.isNotEmpty)
+                        _buildDetailRow(
+                            theme,
+                            Icons.person_rounded,
+                            teachers.join('\n')
+                        ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                }
             ),
           ),
         );
@@ -293,7 +299,7 @@ class _CalendarPageState extends State<CalendarPage> {
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(24),
             ),
             child: DropdownButtonHideUnderline(
@@ -360,12 +366,12 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
                 daysOfWeekStyle: DaysOfWeekStyle(
                   weekdayStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
-                  weekendStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7), fontWeight: FontWeight.bold),
+                  weekendStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontWeight: FontWeight.bold),
                 ),
                 calendarStyle: CalendarStyle(
                   defaultTextStyle: TextStyle(color: theme.colorScheme.onSurface),
-                  weekendTextStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.8)),
-                  outsideTextStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                  weekendTextStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+                  outsideTextStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                   selectedDecoration: BoxDecoration(
                     color: theme.colorScheme.primary,
                     shape: BoxShape.circle,
@@ -389,7 +395,7 @@ class _CalendarPageState extends State<CalendarPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerLowest,
-              border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+              border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -450,148 +456,158 @@ class _CalendarPageState extends State<CalendarPage> {
                   ],
                 ),
               )
-                  : ListView.separated(
-                padding: const EdgeInsets.all(20),
-                itemCount: selectedDayEvents.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 16),
-                itemBuilder: (context, index) {
-                  final event = selectedDayEvents[index];
-                  final startTime = DateFormat('HH:mm').format(event['dtstart'] as DateTime);
-                  final endTime = DateFormat('HH:mm').format(event['dtend'] as DateTime);
+                  : ValueListenableBuilder<bool>(
+                  valueListenable: ZsebtunApp.oldRoomsNotifier,
+                  builder: (context, useNewRooms, child) {
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: selectedDayEvents.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final event = selectedDayEvents[index];
+                        final startTime = DateFormat('HH:mm').format(event['dtstart'] as DateTime);
+                        final endTime = DateFormat('HH:mm').format(event['dtend'] as DateTime);
 
-                  final className = event['className'] ?? t('unknown_class');
-                  final classType = event['classType']?.toString() ?? '';
-                  final roomsList = event['rooms'] as List<dynamic>? ?? [];
-                  final location = roomsList.isNotEmpty
-                      ? roomsList.map((r) => r['raw']).join(', ')
-                      : t('unknown_room');
-                  final teachers = event['teachers'] as List<dynamic>? ?? [];
+                        final className = event['className'] ?? t('unknown_class');
+                        final classType = event['classType']?.toString() ?? '';
+                        final roomsList = event['rooms'] as List<dynamic>? ?? [];
 
-                  return Container(
-                    decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2))
-                        ]
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => _showEventDetails(context, event),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 56,
-                                child: Column(
+                        // SAFE FORMATTING: Explicitly cast dynamic raw values to Strings
+                        final location = roomsList.isNotEmpty
+                            ? roomsList.map((r) => useNewRooms
+                            ? r['raw'].toString()
+                            : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+                            : t('unknown_room');
+
+                        final teachers = event['teachers'] as List<dynamic>? ?? [];
+
+                        return Container(
+                          decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainer,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))
+                              ]
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () => _showEventDetails(context, event),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      startTime,
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.primary),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      endTime,
-                                      style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 16),
-                                width: 3,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.tertiary,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Wrap(
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      spacing: 8,
-                                      children: [
-                                        Text(
-                                          className,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: theme.colorScheme.onSurface,
-                                          ),
-                                        ),
-                                        if (classType.isNotEmpty)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.secondaryContainer,
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                                classType,
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSecondaryContainer)
-                                            ),
-                                          )
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            location,
-                                            style: TextStyle(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-
-                                    if (teachers.isNotEmpty) ...[
-                                      const SizedBox(height: 6),
-                                      Row(
+                                    SizedBox(
+                                      width: 56,
+                                      child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Icon(Icons.person, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              teachers.join(', '),
-                                              style: TextStyle(
-                                                color: theme.colorScheme.onSurfaceVariant,
-                                                fontSize: 13,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                          Text(
+                                            startTime,
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.primary),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            endTime,
+                                            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
                                           ),
                                         ],
                                       ),
-                                    ]
+                                    ),
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                                      width: 3,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.tertiary,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Wrap(
+                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            spacing: 8,
+                                            children: [
+                                              Text(
+                                                className,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: theme.colorScheme.onSurface,
+                                                ),
+                                              ),
+                                              if (classType.isNotEmpty)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.secondaryContainer,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                      classType,
+                                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSecondaryContainer)
+                                                  ),
+                                                )
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  location,
+                                                  style: TextStyle(
+                                                    color: theme.colorScheme.onSurfaceVariant,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          if (teachers.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(Icons.person, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    teachers.join(', '),
+                                                    style: TextStyle(
+                                                      color: theme.colorScheme.onSurfaceVariant,
+                                                      fontSize: 13,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ]
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                        );
+                      },
+                    );
+                  }
               ),
             ),
           ),
