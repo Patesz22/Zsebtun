@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// @description Service to normalize and format complex university classroom names.
 class RoomFormatterService {

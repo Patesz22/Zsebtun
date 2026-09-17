@@ -11,6 +11,7 @@ import '../services/ics_parser_service.dart';
 import 'calendar_page.dart';
 import 'settings_page.dart';
 import '../services/room_formatter_service.dart';
+import '../services/github_update_service.dart';
 
 /// @description The main landing page of the application displaying current day statistics,
 /// a dynamic greeting, and an actively counting down hero card for the next upcoming class.
@@ -38,6 +39,10 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _initializeDashboard();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GithubUpdateService.checkForUpdates(context, showUpToDateMessage: false);
+    });
 
     // Update the UI every minute to keep the "starts in X mins" accurate
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
