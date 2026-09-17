@@ -5,7 +5,7 @@
 
 ## Features
 
-*   **Dashboard-First Experience:** A sleek home screen that gives you a quick overview of your day, featuring daily class statistics and a live, calculating countdown to your next upcoming class.
+*   **Dashboard:** A sleek home screen that gives you a quick overview of your day, featuring daily class statistics and a live, calculating countdown to your next upcoming class.
 *   **Interactive Calendar:** Switch between daily, weekly, and monthly views. Tap any class to open a detailed modal containing times, extracted room floors, and teachers.
 *   **Offline Ready:** Your schedule is parsed and cached locally, ensuring full offline access after the initial sync.
 
