@@ -161,9 +161,9 @@ class _CalendarPageState extends State<CalendarPage> {
     final theme = Theme.of(context);
     final startTime = DateFormat('HH:mm').format(event['dtstart'] as DateTime);
     final endTime = DateFormat('HH:mm').format(event['dtend'] as DateTime);
-    final date = DateFormat(t('date_format'), ZsebtunApp.localeString).format(event['dtstart'] as DateTime);
+    final date = DateFormat(tr('date_format'), ZsebtunApp.localeString).format(event['dtstart'] as DateTime);
 
-    final className = event['className'] ?? t('unknown_class');
+    final className = event['className'] ?? tr('unknown_class');
     final classType = event['classType']?.toString() ?? '';
     final eventType = event['eventType']?.toString() ?? '';
     final roomsList = event['rooms'] as List<dynamic>? ?? [];
@@ -181,7 +181,7 @@ class _CalendarPageState extends State<CalendarPage> {
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: ValueListenableBuilder<bool>(
-                valueListenable: ZsebtunApp.oldRoomsNotifier,
+                valueListenable: ZsebtunApp.newRoomsNotifier,
                 builder: (context, useNewRooms, child) {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
@@ -237,7 +237,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             roomsList.map((r) => '${useNewRooms ? r['raw'] : RoomFormatterService.formatRoomName(r['raw'])}  •  ${r['floor']}').join('\n')
                         )
                       else
-                        _buildDetailRow(theme, Icons.location_off_rounded, t('unknown_room')),
+                        _buildDetailRow(theme, Icons.location_off_rounded, tr('unknown_room')),
                       const SizedBox(height: 20),
                       if (teachers.isNotEmpty)
                         _buildDetailRow(
@@ -291,7 +291,7 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: Text(t('title'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+        title: Text(tr('title'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
         backgroundColor: theme.colorScheme.surface,
         scrolledUnderElevation: 0,
         actions: [
@@ -318,7 +318,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 items: ['daily', 'weekly', 'monthly'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
-                    child: Text(t(value), style: TextStyle(color: theme.colorScheme.onSurface)),
+                    child: Text(tr(value), style: TextStyle(color: theme.colorScheme.onSurface)),
                   );
                 }).toList(),
               ),
@@ -330,7 +330,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 context,
                 MaterialPageRoute(builder: (_) => const SettingsPage())
             ),
-            tooltip: t('settings'),
+            tooltip: tr('settings'),
           ),
           const SizedBox(width: 8),
         ],
@@ -415,8 +415,8 @@ class _CalendarPageState extends State<CalendarPage> {
                 Expanded(
                   child: Text(
                     _selectedDay != null
-                        ? DateFormat(t('date_format'), ZsebtunApp.localeString).format(_selectedDay!)
-                        : t('select_day'),
+                        ? DateFormat(tr('date_format'), ZsebtunApp.localeString).format(_selectedDay!)
+                        : tr('select_day'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,
@@ -452,12 +452,12 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: [
                     Icon(Icons.event_busy_rounded, size: 72, color: theme.colorScheme.surfaceContainerHighest),
                     const SizedBox(height: 16),
-                    Text(t('no_classes'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 16)),
+                    Text(tr('no_classes'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 16)),
                   ],
                 ),
               )
                   : ValueListenableBuilder<bool>(
-                  valueListenable: ZsebtunApp.oldRoomsNotifier,
+                  valueListenable: ZsebtunApp.newRoomsNotifier,
                   builder: (context, useNewRooms, child) {
                     return ListView.separated(
                       padding: const EdgeInsets.all(20),
@@ -468,7 +468,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         final startTime = DateFormat('HH:mm').format(event['dtstart'] as DateTime);
                         final endTime = DateFormat('HH:mm').format(event['dtend'] as DateTime);
 
-                        final className = event['className'] ?? t('unknown_class');
+                        final className = event['className'] ?? tr('unknown_class');
                         final classType = event['classType']?.toString() ?? '';
                         final roomsList = event['rooms'] as List<dynamic>? ?? [];
 
@@ -477,7 +477,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             ? roomsList.map((r) => useNewRooms
                             ? r['raw'].toString()
                             : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
-                            : t('unknown_room');
+                            : tr('unknown_room');
 
                         final teachers = event['teachers'] as List<dynamic>? ?? [];
 

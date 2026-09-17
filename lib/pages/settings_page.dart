@@ -33,7 +33,7 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: Text(t('settings'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+        title: Text(tr('settings'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
         backgroundColor: theme.colorScheme.surface,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
@@ -47,7 +47,7 @@ class SettingsPage extends StatelessWidget {
                 final isDark = currentMode == ThemeMode.dark;
                 return SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(t('dark_mode'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  title: Text(tr('dark_mode'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
                   secondary: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -71,12 +71,12 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: 12),
 
           ValueListenableBuilder<bool>(
-              valueListenable: ZsebtunApp.oldRoomsNotifier,
+              valueListenable: ZsebtunApp.newRoomsNotifier,
               builder: (context, useNewRooms, child) {
                 return SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(t('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                  subtitle: Text(t('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                  title: Text(tr('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
                   secondary: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -90,7 +90,7 @@ class SettingsPage extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   tileColor: theme.colorScheme.surfaceContainerLowest,
                   onChanged: (value) async {
-                    ZsebtunApp.oldRoomsNotifier.value = value;
+                    ZsebtunApp.newRoomsNotifier.value = value;
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setBool('oldRooms', value);
                   },
@@ -111,7 +111,7 @@ class SettingsPage extends StatelessWidget {
               ),
               child: Icon(Icons.language, color: theme.colorScheme.onSecondaryContainer),
             ),
-            title: Text(t('language'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            title: Text(tr('language'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
             trailing: ValueListenableBuilder<String>(
                 valueListenable: ZsebtunApp.languageNotifier,
                 builder: (context, currentLang, child) {
@@ -122,8 +122,8 @@ class SettingsPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
                       items: [
-                        DropdownMenuItem(value: 'hu', child: Text(t('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
-                        DropdownMenuItem(value: 'en', child: Text(t('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                        DropdownMenuItem(value: 'hu', child: Text(tr('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                        DropdownMenuItem(value: 'en', child: Text(tr('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
                       ],
                       onChanged: (String? newLang) async {
                         if (newLang != null) {
@@ -144,7 +144,7 @@ class SettingsPage extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             tileColor: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
             leading: Icon(Icons.sync_problem, color: theme.colorScheme.error),
-            title: Text(t('change_link'), style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.w600)),
+            title: Text(tr('change_link'), style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.w600)),
             onTap: () => _logout(context),
           ),
         ],

@@ -50,7 +50,7 @@ class _SetupPageState extends State<SetupPage> {
     final link = _linkController.text.trim();
     if (link.isEmpty || !link.startsWith('http')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t('invalid_link')), backgroundColor: Colors.red),
+        SnackBar(content: Text(tr('invalid_link')), backgroundColor: Colors.red),
       );
       return;
     }
@@ -92,7 +92,7 @@ class _SetupPageState extends State<SetupPage> {
                 Icon(Icons.calendar_today_rounded, size: 80, color: theme.colorScheme.primary),
                 const SizedBox(height: 24),
                 Text(
-                  t('setup_title'),
+                  tr('setup_title'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,
@@ -102,7 +102,7 @@ class _SetupPageState extends State<SetupPage> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  t('setup_desc'),
+                  tr('setup_desc'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                 ),
@@ -111,7 +111,7 @@ class _SetupPageState extends State<SetupPage> {
                   controller: _linkController,
                   style: TextStyle(color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
-                    labelText: t('link_label'),
+                    labelText: tr('link_label'),
                     labelStyle: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                     hintText: 'https://neptun...',
                     hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
@@ -143,7 +143,7 @@ class _SetupPageState extends State<SetupPage> {
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                   )
                       : Text(
-                      t('sync_button'),
+                      tr('sync_button'),
                       style: TextStyle(
                           fontSize: 18,
                           color: theme.colorScheme.onPrimary
