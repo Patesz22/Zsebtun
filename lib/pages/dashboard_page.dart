@@ -131,9 +131,9 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @returns A localized greeting string.
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return t('greeting_morning');
-    if (hour < 18) return t('greeting_afternoon');
-    return t('greeting_evening');
+    if (hour < 12) return tr('greeting_morning');
+    if (hour < 18) return tr('greeting_afternoon');
+    return tr('greeting_evening');
   }
 
   /// @description Calculates the formatted time remaining until a target DateTime.
@@ -141,15 +141,15 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @returns A localized string representing the remaining hours and minutes.
   String _getTimeUntil(DateTime target) {
     final diff = target.difference(DateTime.now());
-    if (diff.isNegative) return t('now');
+    if (diff.isNegative) return tr('now');
 
     final hours = diff.inHours;
     final minutes = diff.inMinutes % 60;
 
     if (hours > 0) {
-      return '$hours${t('hrs')} $minutes${t('mins')}';
+      return '$hours${tr('hrs')} $minutes${tr('mins')}';
     }
-    return '$minutes${t('mins')}';
+    return '$minutes${tr('mins')}';
   }
 
   @override
@@ -161,7 +161,7 @@ class _DashboardPageState extends State<DashboardPage> {
       backgroundColor: theme.colorScheme.surface,
       appBar: _selectedIndex == 0
           ? AppBar(
-        title: Text(t('dashboard'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+        title: Text(tr('dashboard'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
         backgroundColor: theme.colorScheme.surface,
         scrolledUnderElevation: 0,
         actions: [
@@ -195,12 +195,12 @@ class _DashboardPageState extends State<DashboardPage> {
           NavigationDestination(
             icon: const Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard_rounded, color: theme.colorScheme.onPrimaryContainer),
-            label: t('dashboard'),
+            label: tr('dashboard'),
           ),
           NavigationDestination(
             icon: const Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month_rounded, color: theme.colorScheme.onPrimaryContainer),
-            label: t('title'),
+            label: tr('title'),
           ),
         ],
       ),
@@ -226,13 +226,13 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            DateFormat(t('date_format'), ZsebtunApp.localeString).format(now),
+            DateFormat(tr('date_format'), ZsebtunApp.localeString).format(now),
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 32),
 
           Text(
-            t('next_class').toUpperCase(),
+            tr('next_class').toUpperCase(),
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.primary),
           ),
           const SizedBox(height: 12),
@@ -250,7 +250,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Expanded(
                 child: _buildStatBox(
                   theme: theme,
-                  title: t('classes_today'),
+                  title: tr('classes_today'),
                   value: '$_finishedClasses / $_totalClasses',
                   icon: Icons.done_all_rounded,
                   color: theme.colorScheme.secondaryContainer,
@@ -292,7 +292,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Icon(Icons.done_all_rounded, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
-              t('no_more_classes'),
+              tr('no_more_classes'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
@@ -302,14 +302,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final startTime = heroEvent['dtstart'] as DateTime;
     final endTime = heroEvent['dtend'] as DateTime;
-    final className = heroEvent['className'] ?? t('unknown_class');
+    final className = heroEvent['className'] ?? tr('unknown_class');
     final roomsList = heroEvent['rooms'] as List<dynamic>? ?? [];
 
     final location = roomsList.isNotEmpty
         ? roomsList.map((r) => useNewRooms
         ? r['raw'].toString()
         : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
-        : t('unknown_room');
+        : tr('unknown_room');
 
     final classType = heroEvent['classType']?.toString() ?? '';
 
@@ -355,7 +355,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     Icon(isRunning ? Icons.play_arrow_rounded : Icons.timer_outlined, size: 14, color: Colors.white),
                     const SizedBox(width: 6),
                     Text(
-                      isRunning ? 'Most!' : '${t('starts_in')} ${_getTimeUntil(startTime)}',
+                      isRunning ? 'Most!' : '${tr('starts_in')} ${_getTimeUntil(startTime)}',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ],
@@ -410,7 +410,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (_nextClass == null) {
       return _buildStatBox(
         theme: theme,
-        title: t('no_more_classes'),
+        title: tr('no_more_classes'),
         value: '-',
         icon: Icons.fast_forward_rounded,
         color: theme.colorScheme.tertiaryContainer,

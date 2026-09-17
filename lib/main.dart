@@ -14,7 +14,7 @@ Map<String, Map<String, String>> localizedStrings = {};
 /// @description Retrieves the localized string for a given key based on the currently active language.
 /// @param key The translation key to look up.
 /// @returns The translated string, or the key itself if the translation is missing.
-String t(String key) {
+String tr(String key) {
   return localizedStrings[ZsebtunApp.languageNotifier.value]?[key] ?? key;
 }
 
