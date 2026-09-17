@@ -33,7 +33,9 @@
     "mins": "m",
     "hrs": "h",
     "open_calendar": "Open Full Calendar",
-    "ready_for_day": "Ready to crush the day?"
+    "ready_for_day": "Ready to crush the day?",
+    "use_new_rooms": "New Room Format",
+    "use_new_rooms_desc": "Display the new room names (e.g., I-B-F-28)"
   },
   "hu": {
     "title": "Órarendem",
@@ -69,6 +71,8 @@
     "mins": "p",
     "hrs": "ó",
     "open_calendar": "Teljes naptár megnyitása",
-    "ready_for_day": "Készen állsz a mai napra?"
+    "ready_for_day": "Készen állsz a mai napra?",
+    "use_new_rooms": "Új teremformátum",
+    "use_new_rooms_desc": "Új terem nevek mutatása (pl. I-B-F-28)"
   }
 }

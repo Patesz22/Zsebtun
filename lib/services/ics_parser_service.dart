@@ -83,7 +83,7 @@ class IcsParserService {
   }
 
   /// @description Converts a raw ICS datetime string into a local Dart DateTime object.
-  /// @param rawDate The datetime string from the ICS file (e.g., '20260114T070000Z').
+  /// @param rawDate The datetime string from the ICS file ('20260114T070000Z').
   /// @returns The parsed DateTime converted to the device's local timezone.
   static DateTime _parseIcsDate(String rawDate) {
     try {
@@ -104,7 +104,7 @@ class IcsParserService {
   }
 
   /// @description Applies BME-specific heuristics to extract floor information from a room string.
-  /// @param room The raw room identifier string (e.g., 'IB028', 'Q-AB-2-I').
+  /// @param room The raw room identifier string ('IB028', 'Q-AB-2-I').
   /// @returns A map containing both the raw room identifier and the calculated floor string.
   static Map<String, String> _parseRoomData(String room) {
     String floor = "?";

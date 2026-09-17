@@ -70,6 +70,35 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
+          ValueListenableBuilder<bool>(
+              valueListenable: ZsebtunApp.oldRoomsNotifier,
+              builder: (context, useNewRooms, child) {
+                return SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  title: Text(t('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  subtitle: Text(t('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.meeting_room_rounded, color: theme.colorScheme.onTertiaryContainer),
+                  ),
+                  value: useNewRooms,
+                  activeColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  tileColor: theme.colorScheme.surfaceContainerLowest,
+                  onChanged: (value) async {
+                    ZsebtunApp.oldRoomsNotifier.value = value;
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('oldRooms', value);
+                  },
+                );
+              }
+          ),
+          const SizedBox(height: 12),
+
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -113,7 +142,7 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            tileColor: theme.colorScheme.errorContainer.withOpacity(0.4),
+            tileColor: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
             leading: Icon(Icons.sync_problem, color: theme.colorScheme.error),
             title: Text(t('change_link'), style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.w600)),
             onTap: () => _logout(context),

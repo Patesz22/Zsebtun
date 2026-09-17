@@ -35,6 +35,7 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('isDark') ?? false;
+  final oldRooms = prefs.getBool('oldRooms') ?? true;
 
   String? savedLang = prefs.getString('language');
   if (savedLang == null) {
@@ -42,7 +43,7 @@ void main() async {
     savedLang = (deviceLang == 'hu') ? 'hu' : 'en';
   }
 
-  runApp(ZsebtunApp(isDark: isDark, initialLang: savedLang));
+  runApp(ZsebtunApp(isDark: isDark, initialLang: savedLang, oldRooms: oldRooms));
 }
 
 /// @description The root widget of the application. It provides global state management
@@ -51,10 +52,12 @@ void main() async {
 class ZsebtunApp extends StatelessWidget {
   final bool isDark;
   final String initialLang;
+  final bool oldRooms;
 
-  const ZsebtunApp({super.key, required this.isDark, required this.initialLang});
+  const ZsebtunApp({super.key, required this.isDark, required this.initialLang, required this.oldRooms});
 
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+  static final ValueNotifier<bool> oldRoomsNotifier = ValueNotifier(true);
   static late ValueNotifier<String> languageNotifier;
 
   /// @description Formats the currently selected language into a locale string required by the intl package.
@@ -64,6 +67,7 @@ class ZsebtunApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+    oldRoomsNotifier.value = oldRooms;
     languageNotifier = ValueNotifier(initialLang);
 
     return ValueListenableBuilder<String>(
