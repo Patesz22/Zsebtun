@@ -21,7 +21,8 @@
 | Dashboard | Calendar View | Class Details | Settings |
 | :---: | :---: | :---: | :---: |
 | <img src="img/en/Sc_dashboard.jpg" width="200"/> | <img src="img/en/Sc_calendar.jpg" width="200"/> | <img src="img/en/Sc_details.jpg" width="200"/> | <img src="img/en/Sc_settings.jpg" width="200"/> |
-(screenshot in other languages [here](https://https://github.com/Patesz22/Zsebtun/tree/dev/img))
+---
+(screenshot in other languages [here](https://github.com/Patesz22/Zsebtun/tree/dev/img))
 
 ## Getting Started
 
