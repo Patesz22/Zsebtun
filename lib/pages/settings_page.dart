@@ -43,6 +43,8 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         children: [
+          // --- UI ---
+
           ValueListenableBuilder<ThemeMode>(
               valueListenable: ZsebtunApp.themeNotifier,
               builder: (context, currentMode, child) {
@@ -69,75 +71,6 @@ class SettingsPage extends StatelessWidget {
                   },
                 );
               }
-          ),
-          const SizedBox(height: 12),
-
-          ValueListenableBuilder<bool>(
-              valueListenable: ZsebtunApp.newRoomsNotifier,
-              builder: (context, useNewRooms, child) {
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(tr('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                  subtitle: Text(tr('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                  secondary: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.tertiaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.meeting_room_rounded, color: theme.colorScheme.onTertiaryContainer),
-                  ),
-                  value: useNewRooms,
-                  activeThumbColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  tileColor: theme.colorScheme.surfaceContainerLowest,
-                  onChanged: (value) async {
-                    ZsebtunApp.newRoomsNotifier.value = value;
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('oldRooms', value);
-                  },
-                );
-              }
-          ),
-          const SizedBox(height: 12),
-
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            tileColor: theme.colorScheme.surfaceContainerLowest,
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.secondaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.language, color: theme.colorScheme.onSecondaryContainer),
-            ),
-            title: Text(tr('language'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
-            trailing: ValueListenableBuilder<String>(
-                valueListenable: ZsebtunApp.languageNotifier,
-                builder: (context, currentLang, child) {
-                  return DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: currentLang,
-                      dropdownColor: theme.colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(12),
-                      icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
-                      items: [
-                        DropdownMenuItem(value: 'hu', child: Text(tr('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
-                        DropdownMenuItem(value: 'en', child: Text(tr('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
-                      ],
-                      onChanged: (String? newLang) async {
-                        if (newLang != null) {
-                          ZsebtunApp.languageNotifier.value = newLang;
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setString('language', newLang);
-                        }
-                      },
-                    ),
-                  );
-                }
-            ),
           ),
           const SizedBox(height: 12),
 
@@ -168,10 +101,83 @@ class SettingsPage extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
+                color: theme.colorScheme.tertiaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.system_update_rounded, color: theme.colorScheme.onPrimaryContainer),
+              child: Icon(Icons.language, color: theme.colorScheme.onTertiaryContainer),
+            ),
+            title: Text(tr('language'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            trailing: ValueListenableBuilder<String>(
+                valueListenable: ZsebtunApp.languageNotifier,
+                builder: (context, currentLang, child) {
+                  return DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: currentLang,
+                      dropdownColor: theme.colorScheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(12),
+                      icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
+                      items: [
+                        DropdownMenuItem(value: 'hu', child: Text(tr('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                        DropdownMenuItem(value: 'en', child: Text(tr('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                      ],
+                      onChanged: (String? newLang) async {
+                        if (newLang != null) {
+                          ZsebtunApp.languageNotifier.value = newLang;
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('language', newLang);
+                        }
+                      },
+                    ),
+                  );
+                }
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // --- APP PREFERENCES ---
+
+          ValueListenableBuilder<bool>(
+              valueListenable: ZsebtunApp.newRoomsNotifier,
+              builder: (context, useNewRooms, child) {
+                return SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  title: Text(tr('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.meeting_room_rounded, color: theme.colorScheme.onPrimaryContainer),
+                  ),
+                  value: useNewRooms,
+                  activeThumbColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  tileColor: theme.colorScheme.surfaceContainerLowest,
+                  onChanged: (value) async {
+                    ZsebtunApp.newRoomsNotifier.value = value;
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('oldRooms', value);
+                  },
+                );
+              }
+          ),
+          const SizedBox(height: 12),
+
+          // --- UPDATES & ACTIONS ---
+
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: theme.colorScheme.surfaceContainerLowest,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.system_update_rounded, color: theme.colorScheme.onSecondaryContainer),
             ),
             title: Text(tr('check_updates'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
             trailing: Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
@@ -190,6 +196,8 @@ class SettingsPage extends StatelessWidget {
             title: Text(tr('change_link'), style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.w600)),
             onTap: () => _logout(context),
           ),
+
+          // --- DEBUG ---
 
           Padding(
             padding: const EdgeInsets.only(left: 16, bottom: 8, top: 24),
@@ -255,7 +263,6 @@ class SettingsPage extends StatelessWidget {
                 );
               }
           ),
-
         ],
       ),
     );
