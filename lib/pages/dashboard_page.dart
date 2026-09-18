@@ -487,9 +487,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final gradientColors = isRunning
         ? [Colors.green.shade600, Colors.green.shade400]
-        : [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)];
+        : [
+      theme.colorScheme.primary.withValues(alpha: 0.75),
+      theme.colorScheme.primary.withValues(alpha: 0.55)
+    ];
 
-    final shadowColor = isRunning ? Colors.green : theme.colorScheme.primary;
+    final shadowColor = isRunning
+        ? Colors.green
+        : theme.colorScheme.primary.withValues(alpha: 0.5);
 
     return Container(
       width: double.infinity,
