@@ -35,6 +35,9 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isLoading = true;
   Timer? _minuteTimer;
 
+  /// @description Provides the simulated current time by applying the debug day offset.
+  DateTime get _simulatedNow => DateTime.now().add(Duration(days: ZsebtunApp.debugDayOffsetNotifier.value));
+
   @override
   void initState() {
     super.initState();
@@ -48,12 +51,23 @@ class _DashboardPageState extends State<DashboardPage> {
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) _calculateClasses();
     });
+
+    // Listen to debug offset changes to reload instantly
+    ZsebtunApp.debugDayOffsetNotifier.addListener(_onDebugOffsetChanged);
   }
 
   @override
   void dispose() {
     _minuteTimer?.cancel();
+    ZsebtunApp.debugDayOffsetNotifier.removeListener(_onDebugOffsetChanged);
     super.dispose();
+  }
+
+  void _onDebugOffsetChanged() {
+    if (mounted) {
+      setState(() => _isLoading = true);
+      _loadFromDatabase();
+    }
   }
 
   /// @description Initializes the dashboard by first loading offline data instantly,
@@ -67,7 +81,7 @@ class _DashboardPageState extends State<DashboardPage> {
   /// to populate the current day's schedule.
   Future<void> _loadFromDatabase() async {
     _allEvents = await DatabaseHelper.instance.getEvents();
-    final now = DateTime.now();
+    final now = _simulatedNow;
 
     _todayEvents = _allEvents.where((event) {
       final dt = event['dtstart'] as DateTime;
@@ -110,7 +124,7 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @description Evaluates today's classes to identify the currently running class,
   /// the next upcoming class, and tallies finished vs. total classes.
   void _calculateClasses() {
-    final now = DateTime.now();
+    final now = _simulatedNow;
     _currentClass = null;
     _nextClass = null;
     _finishedClasses = 0;
@@ -135,7 +149,7 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @description Generates a time-appropriate greeting (morning, afternoon, evening).
   /// @returns A localized greeting string.
   String _getGreeting() {
-    final hour = DateTime.now().hour;
+    final hour = _simulatedNow.hour;
     if (hour < 12) return tr('greeting_morning');
     if (hour < 18) return tr('greeting_afternoon');
     return tr('greeting_evening');
@@ -145,7 +159,7 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @param target The future DateTime to compare against.
   /// @returns A localized string representing the remaining hours and minutes.
   String _getTimeUntil(DateTime target) {
-    final diff = target.difference(DateTime.now());
+    final diff = target.difference(_simulatedNow);
     if (diff.isNegative) return tr('now');
 
     final hours = diff.inHours;
@@ -155,6 +169,137 @@ class _DashboardPageState extends State<DashboardPage> {
       return '$hours${tr('hrs')} $minutes${tr('mins')}';
     }
     return '$minutes${tr('mins')}';
+  }
+
+  /// @description Displays a bottom sheet showing all classes scheduled for the currently selected day.
+  void _showTodayClassesBottomSheet(ThemeData theme, bool isDark, bool useNewRooms) {
+    showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: theme.colorScheme.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (context) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Icon(Icons.list_alt_rounded, color: theme.colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        tr('todays_classes_list'),
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_todayEvents.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 40),
+                    child: Text(tr('no_more_classes'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
+                      itemCount: _todayEvents.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final event = _todayEvents[index];
+                        final startTime = event['dtstart'] as DateTime;
+                        final endTime = event['dtend'] as DateTime;
+                        final className = event['className'] ?? tr('unknown_class');
+                        final roomsList = event['rooms'] as List<dynamic>? ?? [];
+
+                        final location = roomsList.isNotEmpty
+                            ? roomsList.map((r) => useNewRooms ? r['raw'].toString() : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+                            : tr('unknown_room');
+
+                        final isFinished = _simulatedNow.isAfter(endTime);
+                        final isRunning = _simulatedNow.isAfter(startTime) && _simulatedNow.isBefore(endTime);
+
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isRunning ? Colors.green.withValues(alpha: 0.15) : theme.colorScheme.surfaceContainer,
+                            borderRadius: BorderRadius.circular(16),
+                            border: isRunning ? Border.all(color: Colors.green) : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    DateFormat('HH:mm').format(startTime),
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: isFinished ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onSurface),
+                                  ),
+                                  Text(
+                                    DateFormat('HH:mm').format(endTime),
+                                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      className,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: isFinished ? theme.colorScheme.onSurfaceVariant : (isRunning ? Colors.green : theme.colorScheme.onSurface),
+                                        decoration: isFinished ? TextDecoration.lineThrough : null,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            location,
+                                            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isFinished)
+                                Icon(Icons.check_circle_rounded, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5))
+                              else if (isRunning)
+                                const Icon(Icons.play_circle_fill_rounded, color: Colors.green)
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
+    );
   }
 
   @override
@@ -214,7 +359,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// @description Renders the dashboard list view containing the hero card and stat boxes.
   Widget _buildDashboardContent(ThemeData theme, bool isDark) {
-    final now = DateTime.now();
+    final now = _simulatedNow;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -234,6 +379,22 @@ class _DashboardPageState extends State<DashboardPage> {
             DateFormat(tr('date_format'), ZsebtunApp.localeString).format(now),
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
           ),
+
+          if (ZsebtunApp.debugDayOffsetNotifier.value != 0)
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: theme.colorScheme.errorContainer, borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bug_report_rounded, size: 16, color: theme.colorScheme.onErrorContainer),
+                  const SizedBox(width: 8),
+                  Text('Debug offset active: ${ZsebtunApp.debugDayOffsetNotifier.value} days', style: TextStyle(color: theme.colorScheme.onErrorContainer, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+
           const SizedBox(height: 32),
 
           Text(
@@ -253,13 +414,19 @@ class _DashboardPageState extends State<DashboardPage> {
           Row(
             children: [
               Expanded(
-                child: _buildStatBox(
-                  theme: theme,
-                  title: tr('classes_today'),
-                  value: '$_finishedClasses / $_totalClasses',
-                  icon: Icons.done_all_rounded,
-                  color: theme.colorScheme.secondaryContainer,
-                  onColor: theme.colorScheme.onSecondaryContainer,
+                child: ValueListenableBuilder<bool>(
+                    valueListenable: ZsebtunApp.newRoomsNotifier,
+                    builder: (context, useNewRooms, child) {
+                      return _buildStatBox(
+                        theme: theme,
+                        title: tr('classes_today'),
+                        value: '$_finishedClasses / $_totalClasses',
+                        icon: Icons.checklist_rtl_rounded,
+                        color: theme.colorScheme.secondaryContainer,
+                        onColor: theme.colorScheme.onSecondaryContainer,
+                        onTap: () => _showTodayClassesBottomSheet(theme, isDark, useNewRooms),
+                      );
+                    }
                 ),
               ),
               const SizedBox(width: 16),
@@ -468,28 +635,36 @@ class _DashboardPageState extends State<DashboardPage> {
     required IconData icon,
     required Color color,
     required Color onColor,
+    VoidCallback? onTap,
+    bool isTimeValue = false,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color,
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: onColor),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: onColor),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: onColor),
+              const SizedBox(height: 16),
+              Text(
+                value,
+                style: TextStyle(fontSize: isTimeValue ? 32 : 32, fontWeight: FontWeight.bold, color: onColor),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(fontSize: 13, color: onColor.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(fontSize: 13, color: onColor.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import '../main.dart';
 import '../database/db_helper.dart';
 import 'setup_page.dart';
 import '../services/github_update_service.dart';
+import 'settings_page_color_picker.dart';
 
 /// @description A dedicated page for user preferences, allowing them to toggle
 /// dark mode, change the application language, or log out by clearing their saved Neptun link.
@@ -147,6 +148,26 @@ class SettingsPage extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.palette_rounded, color: theme.colorScheme.onSecondaryContainer),
+            ),
+            title: Text(tr('appearance'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            trailing: Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsPage()));
+            },
+          ),
+          const SizedBox(height: 12),
+
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: theme.colorScheme.surfaceContainerLowest,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
                 shape: BoxShape.circle,
               ),
@@ -169,6 +190,72 @@ class SettingsPage extends StatelessWidget {
             title: Text(tr('change_link'), style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.w600)),
             onTap: () => _logout(context),
           ),
+
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8, top: 24),
+            child: Text(
+              tr('debug').toUpperCase(),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.error),
+            ),
+          ),
+
+          ValueListenableBuilder<int>(
+              valueListenable: ZsebtunApp.debugDayOffsetNotifier,
+              builder: (context, offset, child) {
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  tileColor: theme.colorScheme.surfaceContainerLowest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.bug_report_rounded, color: theme.colorScheme.onErrorContainer),
+                  ),
+                  title: Text(tr('debug_day_offset'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline_rounded),
+                        onPressed: () async {
+                          final newVal = offset - 1;
+                          ZsebtunApp.debugDayOffsetNotifier.value = newVal;
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setInt('debugDayOffset', newVal);
+                        },
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          offset > 0 ? '+$offset' : '$offset',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded),
+                        onPressed: () async {
+                          final newVal = offset + 1;
+                          ZsebtunApp.debugDayOffsetNotifier.value = newVal;
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setInt('debugDayOffset', newVal);
+                        },
+                      ),
+                    ],
+                  ),
+                  onLongPress: () async {
+                    // Quick reset to 0 on long press
+                    ZsebtunApp.debugDayOffsetNotifier.value = 0;
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setInt('debugDayOffset', 0);
+                  },
+                );
+              }
+          ),
+
         ],
       ),
     );
