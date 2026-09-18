@@ -44,7 +44,16 @@
     "up_to_date": "App is up to date",
     "update_error": "Failed to check for updates",
     "downloading": "Opening browser...",
-    "check_updates": "Check for Updates"
+    "check_updates": "Check for Updates",
+    "debug": "Debug",
+    "debug_day_offset": "Simulate Day Offset",
+    "todays_classes_list": "Today's Schedule",
+    "appearance": "Appearance",
+    "theme_color": "Theme Color",
+    "amoled_black": "AMOLED Black",
+    "amoled_desc": "True black background for dark mode",
+    "edit_light_color": "Editing Light Mode Color",
+    "edit_dark_color": "Editing Dark Mode Color"
   },
   "hu": {
     "title": "Órarendem",
@@ -91,6 +100,15 @@
     "up_to_date": "Az alkalmazás naprakész",
     "update_error": "Hiba a frissítések keresésekor",
     "downloading": "Böngésző megnyitása...",
-    "check_updates": "Frissítések keresése"
+    "check_updates": "Frissítések keresése",
+    "debug": "Hibakeresés",
+    "debug_day_offset": "Nap eltolás szimulálása",
+    "todays_classes_list": "Mai órarend",
+    "appearance": "Megjelenés",
+    "theme_color": "Téma színe",
+    "amoled_black": "AMOLED Fekete",
+    "amoled_desc": "Valódi fekete háttér sötét módban",
+    "edit_light_color": "Világos mód színének szerkesztése",
+    "edit_dark_color": "Sötét mód színének szerkesztése"
   }
 }
