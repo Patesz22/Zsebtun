@@ -23,10 +23,10 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     if (_editDarkMode) {
       ZsebtunApp.seedColorDarkNotifier.value = color;
-      await prefs.setInt('seedColorDark', color.value);
+      await prefs.setInt('seedColorDark', color.toARGB32());
     } else {
       ZsebtunApp.seedColorLightNotifier.value = color;
-      await prefs.setInt('seedColorLight', color.value);
+      await prefs.setInt('seedColorLight', color.toARGB32());
     }
   }
 
@@ -95,7 +95,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                   itemCount: _presetColors.length,
                   itemBuilder: (context, index) {
                     final color = _presetColors[index];
-                    final isSelected = currentColor.value == color.value;
+                    final isSelected = currentColor.toARGB32() == color.toARGB32();
 
                     return GestureDetector(
                       onTap: () => _updateColor(color),
@@ -106,7 +106,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                           shape: BoxShape.circle,
                           border: isSelected ? Border.all(color: theme.colorScheme.onSurface, width: 3) : null,
                           boxShadow: isSelected
-                              ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 8, spreadRadius: 2)]
+                              ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 2)]
                               : null,
                         ),
                         child: isSelected
@@ -145,7 +145,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                     child: const Icon(Icons.dark_mode_rounded, color: Colors.white),
                   ),
                   value: isAmoled,
-                  activeColor: theme.colorScheme.primary,
+                  activeThumbColor: theme.colorScheme.primary,
                   onChanged: _toggleAmoled,
                 );
               }
