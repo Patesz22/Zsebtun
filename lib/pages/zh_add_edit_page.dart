@@ -5,8 +5,7 @@ import 'package:intl/intl.dart';
 import '../main.dart';
 import '../database/db_helper.dart';
 
-/// @description Form page to create or update a custom ZH event using global language,
-/// theme colors, and calendar formats.
+/// @description Form page to create or update an exam using localized date, time, and calendar options.
 class ZhAddEditPage extends StatefulWidget {
   final Map<String, dynamic>? existingEvent;
   final List<String>? preloadedSubjects;
@@ -113,6 +112,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     super.dispose();
   }
 
+  /// @description Converts raw string, integer timestamp, or DateTime objects into a DateTime instance.
   DateTime _parseDate(dynamic value) {
     if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
@@ -120,6 +120,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     return DateTime.now();
   }
 
+  /// @description Safely unpacks room descriptions from legacy JSON lists or plain text attributes.
   String _extractRoom(dynamic roomsRaw) {
     if (roomsRaw == null) return '';
     try {
@@ -133,6 +134,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     return roomsRaw.toString();
   }
 
+  /// @description Asynchronously retrieves enrolled subjects for chip recommendations.
   Future<void> _loadSemesterSubjects() async {
     try {
       final subjects = await DatabaseHelper.instance.getCurrentSemesterSubjects();
@@ -147,22 +149,41 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     }
   }
 
+  /// @description Shows date picker configured with the customized first day of the week and 24h format.
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: ZsebtunApp.getCalendarPickerLocale(),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: ZsebtunApp.use24HourFormatNotifier.value,
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
     }
   }
 
+  /// @description Shows time picker configured with the active 24-hour or 12-hour setting for start time.
   Future<void> _pickStartTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _startTime,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: ZsebtunApp.use24HourFormatNotifier.value,
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -179,16 +200,26 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     }
   }
 
+  /// @description Shows time picker configured with the active 24-hour or 12-hour setting for end time.
   Future<void> _pickEndTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _endTime,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: ZsebtunApp.use24HourFormatNotifier.value,
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() => _endTime = picked);
     }
   }
 
+  /// @description Validates entry inputs and persists changes to SQLite.
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -241,6 +272,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     }
   }
 
+  /// @description Prompts deletion confirmation and removes the record from SQLite.
   Future<void> _delete() async {
     if (widget.existingEvent?['id'] == null) return;
 
@@ -372,7 +404,13 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 leading: Icon(Icons.calendar_today_rounded, color: _selectedColor),
                 title: Text(tr('date'), style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(DateFormat(tr('date_format'), ZsebtunApp.localeString).format(_selectedDate)),
+                subtitle: ValueListenableBuilder<String>(
+                  valueListenable: ZsebtunApp.dateFormatNotifier,
+                  builder: (context, pattern, _) {
+                    final weekday = DateFormat('EEEE', ZsebtunApp.localeString).format(_selectedDate);
+                    return Text('${ZsebtunApp.formatDate(_selectedDate)} ($weekday)');
+                  },
+                ),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 onTap: _pickDate,
               ),
@@ -391,7 +429,15 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       title: Text(tr('start_time'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      subtitle: Text(_startTime.format(context), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      subtitle: ValueListenableBuilder<bool>(
+                        valueListenable: ZsebtunApp.use24HourFormatNotifier,
+                        builder: (context, _, __) {
+                          return Text(
+                            ZsebtunApp.formatTimeOfDay(_startTime),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          );
+                        },
+                      ),
                       onTap: _pickStartTime,
                     ),
                   ),
@@ -407,7 +453,15 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       title: Text(tr('end_time'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      subtitle: Text(_endTime.format(context), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      subtitle: ValueListenableBuilder<bool>(
+                        valueListenable: ZsebtunApp.use24HourFormatNotifier,
+                        builder: (context, _, __) {
+                          return Text(
+                            ZsebtunApp.formatTimeOfDay(_endTime),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          );
+                        },
+                      ),
                       onTap: _pickEndTime,
                     ),
                   ),
