@@ -12,9 +12,10 @@ import 'calendar_page.dart';
 import 'settings_page.dart';
 import '../services/room_formatter_service.dart';
 import '../services/github_update_service.dart';
+import 'zh_list_page.dart';
 
 /// @description The main landing page of the application displaying current day statistics,
-/// a dynamic greeting, and an actively counting down hero card for the next upcoming class.
+/// a dynamic greeting, and an actively counting down hero card for the next upcoming class or exam.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -47,7 +48,7 @@ class _DashboardPageState extends State<DashboardPage> {
       GithubUpdateService.checkForUpdates(context, showUpToDateMessage: false);
     });
 
-    // Update the UI every minute to keep the "starts in X mins" accurate
+    // Update the UI every minute to keep countdowns accurate
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) _calculateClasses();
     });
@@ -147,7 +148,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Generates a time-appropriate greeting (morning, afternoon, evening).
-  /// @returns A localized greeting string.
   String _getGreeting() {
     final hour = _simulatedNow.hour;
     if (hour < 12) return tr('greeting_morning');
@@ -156,8 +156,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Calculates the formatted time remaining until a target DateTime.
-  /// @param target The future DateTime to compare against.
-  /// @returns A localized string representing the remaining hours and minutes.
   String _getTimeUntil(DateTime target) {
     final diff = target.difference(_simulatedNow);
     if (diff.isNegative) return tr('now');
@@ -171,134 +169,171 @@ class _DashboardPageState extends State<DashboardPage> {
     return '$minutes${tr('mins')}';
   }
 
-  /// @description Displays a bottom sheet showing all classes scheduled for the currently selected day.
+  /// @description Displays a bottom sheet showing all classes and exams scheduled for today.
   void _showTodayClassesBottomSheet(ThemeData theme, bool isDark, bool useNewRooms) {
+    final zhColor = ZsebtunApp.zhColorNotifier.value;
+
     showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: theme.colorScheme.surface,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        builder: (context) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Icon(Icons.list_alt_rounded, color: theme.colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Text(
+                      tr('todays_classes_list'),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    ),
+                  ],
+                ),
+              ),
+              if (_todayEvents.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      Icon(Icons.list_alt_rounded, color: theme.colorScheme.primary),
-                      const SizedBox(width: 12),
-                      Text(
-                        tr('todays_classes_list'),
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_todayEvents.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 40),
-                    child: Text(tr('no_more_classes'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                  )
-                else
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
-                      itemCount: _todayEvents.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final event = _todayEvents[index];
-                        final startTime = event['dtstart'] as DateTime;
-                        final endTime = event['dtend'] as DateTime;
-                        final className = event['className'] ?? tr('unknown_class');
-                        final roomsList = event['rooms'] as List<dynamic>? ?? [];
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Text(tr('no_more_classes'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                )
+              else
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
+                    itemCount: _todayEvents.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final event = _todayEvents[index];
+                      final startTime = event['dtstart'] as DateTime;
+                      final endTime = event['dtend'] as DateTime;
+                      final className = event['className'] ?? tr('unknown_class');
+                      final roomsList = event['rooms'] as List<dynamic>? ?? [];
 
-                        final location = roomsList.isNotEmpty
-                            ? roomsList.map((r) => useNewRooms ? r['raw'].toString() : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
-                            : tr('unknown_room');
+                      final location = roomsList.isNotEmpty
+                          ? roomsList.map((r) => useNewRooms ? r['raw'].toString() : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+                          : tr('unknown_room');
 
-                        final isFinished = _simulatedNow.isAfter(endTime);
-                        final isRunning = _simulatedNow.isAfter(startTime) && _simulatedNow.isBefore(endTime);
+                      final isFinished = _simulatedNow.isAfter(endTime);
+                      final isRunning = _simulatedNow.isAfter(startTime) && _simulatedNow.isBefore(endTime);
+                      final isZh = event['isZh'] == 1 || event['classType'] == 'ZH';
 
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isRunning ? Colors.green.withValues(alpha: 0.15) : theme.colorScheme.surfaceContainer,
-                            borderRadius: BorderRadius.circular(16),
-                            border: isRunning ? Border.all(color: Colors.green) : null,
-                          ),
-                          child: Row(
-                            children: [
-                              Column(
+                      final tileBorderColor = isRunning
+                          ? Colors.green
+                          : (isZh ? zhColor.withValues(alpha: 0.5) : null);
+
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isRunning
+                              ? Colors.green.withValues(alpha: 0.15)
+                              : (isZh ? zhColor.withValues(alpha: 0.08) : theme.colorScheme.surfaceContainer),
+                          borderRadius: BorderRadius.circular(16),
+                          border: tileBorderColor != null ? Border.all(color: tileBorderColor, width: isZh ? 1.5 : 1.0) : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  DateFormat('HH:mm').format(startTime),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isFinished
+                                        ? theme.colorScheme.onSurfaceVariant
+                                        : (isZh ? zhColor : theme.colorScheme.onSurface),
+                                  ),
+                                ),
+                                Text(
+                                  DateFormat('HH:mm').format(endTime),
+                                  style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    DateFormat('HH:mm').format(startTime),
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: isFinished ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onSurface),
-                                  ),
-                                  Text(
-                                    DateFormat('HH:mm').format(endTime),
-                                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      className,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isFinished ? theme.colorScheme.onSurfaceVariant : (isRunning ? Colors.green : theme.colorScheme.onSurface),
-                                        decoration: isFinished ? TextDecoration.lineThrough : null,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                                        const SizedBox(width: 4),
-                                        Expanded(
+                                  Row(
+                                    children: [
+                                      if (isZh) ...[
+                                        Container(
+                                          margin: const EdgeInsets.only(right: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: zhColor.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
                                           child: Text(
-                                            location,
-                                            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            'ZH',
+                                            style: TextStyle(color: zhColor, fontSize: 10, fontWeight: FontWeight.bold),
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ],
-                                ),
+                                      Expanded(
+                                        child: Text(
+                                          className,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isFinished
+                                                ? theme.colorScheme.onSurfaceVariant
+                                                : (isRunning ? Colors.green : (isZh ? zhColor : theme.colorScheme.onSurface)),
+                                            decoration: isFinished ? TextDecoration.lineThrough : null,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          location,
+                                          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              if (isFinished)
-                                Icon(Icons.check_circle_rounded, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5))
-                              else if (isRunning)
-                                const Icon(Icons.play_circle_fill_rounded, color: Colors.green)
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                            ),
+                            if (isFinished)
+                              Icon(Icons.check_circle_rounded, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5))
+                            else if (isRunning)
+                              const Icon(Icons.play_circle_fill_rounded, color: Colors.green)
+                          ],
+                        ),
+                      );
+                    },
                   ),
-              ],
-            ),
-          );
-        }
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -330,6 +365,7 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           _buildDashboardContent(theme, isDark),
           CalendarPage(preloadedEvents: _allEvents),
+          const ZhListPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -338,6 +374,9 @@ class _DashboardPageState extends State<DashboardPage> {
           setState(() {
             _selectedIndex = index;
           });
+          if (index == 0 || index == 1) {
+            _loadFromDatabase();
+          }
         },
         backgroundColor: theme.colorScheme.surfaceContainer,
         indicatorColor: theme.colorScheme.primaryContainer,
@@ -351,6 +390,11 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: const Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month_rounded, color: theme.colorScheme.onPrimaryContainer),
             label: tr('title'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment_rounded, color: theme.colorScheme.onPrimaryContainer),
+            label: tr('zh_list'),
           ),
         ],
       ),
@@ -390,7 +434,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   Icon(Icons.bug_report_rounded, size: 16, color: theme.colorScheme.onErrorContainer),
                   const SizedBox(width: 8),
-                  Text('Debug offset active: ${ZsebtunApp.debugDayOffsetNotifier.value} days', style: TextStyle(color: theme.colorScheme.onErrorContainer, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Debug offset active: ${ZsebtunApp.debugDayOffsetNotifier.value} days',
+                    style: TextStyle(color: theme.colorScheme.onErrorContainer, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -403,10 +450,10 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 12),
           ValueListenableBuilder<bool>(
-              valueListenable: ZsebtunApp.newRoomsNotifier,
-              builder: (context, useNewRooms, child) {
-                return _buildHeroCard(theme, isDark, useNewRooms);
-              }
+            valueListenable: ZsebtunApp.newRoomsNotifier,
+            builder: (context, useNewRooms, child) {
+              return _buildHeroCard(theme, isDark, useNewRooms);
+            },
           ),
 
           const SizedBox(height: 24),
@@ -415,18 +462,18 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               Expanded(
                 child: ValueListenableBuilder<bool>(
-                    valueListenable: ZsebtunApp.newRoomsNotifier,
-                    builder: (context, useNewRooms, child) {
-                      return _buildStatBox(
-                        theme: theme,
-                        title: tr('classes_today'),
-                        value: '$_finishedClasses / $_totalClasses',
-                        icon: Icons.checklist_rtl_rounded,
-                        color: theme.colorScheme.secondaryContainer,
-                        onColor: theme.colorScheme.onSecondaryContainer,
-                        onTap: () => _showTodayClassesBottomSheet(theme, isDark, useNewRooms),
-                      );
-                    }
+                  valueListenable: ZsebtunApp.newRoomsNotifier,
+                  builder: (context, useNewRooms, child) {
+                    return _buildStatBox(
+                      theme: theme,
+                      title: tr('classes_today'),
+                      value: '$_finishedClasses / $_totalClasses',
+                      icon: Icons.checklist_rtl_rounded,
+                      color: theme.colorScheme.secondaryContainer,
+                      onColor: theme.colorScheme.onSecondaryContainer,
+                      onTap: () => _showTodayClassesBottomSheet(theme, isDark, useNewRooms),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -440,12 +487,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// @description Builds the hero card displaying either the currently running class in green,
-  /// or the next immediate class in the primary theme color.
-  /// @param theme The current ThemeData context.
-  /// @param isDark Boolean indicating if dark mode is active to adjust shadows.
-  /// @param useNewRooms Boolean indicating if the user prefers raw unformatted room names.
-  /// @returns A styled Container widget.
+  /// @description Builds the hero card displaying either the currently running class,
+  /// an upcoming midterm with the custom ZH color, or the next immediate class.
   Widget _buildHeroCard(ThemeData theme, bool isDark, bool useNewRooms) {
     final isRunning = _currentClass != null;
     final heroEvent = _currentClass ?? _nextClass;
@@ -484,17 +527,21 @@ class _DashboardPageState extends State<DashboardPage> {
         : tr('unknown_room');
 
     final classType = heroEvent['classType']?.toString() ?? '';
+    final isZh = heroEvent['isZh'] == 1 || classType == 'ZH';
+    final zhColor = ZsebtunApp.zhColorNotifier.value;
 
     final gradientColors = isRunning
         ? [Colors.green.shade600, Colors.green.shade400]
+        : (isZh
+        ? [zhColor.withValues(alpha: 0.85), zhColor.withValues(alpha: 0.65)]
         : [
       theme.colorScheme.primary.withValues(alpha: 0.75),
-      theme.colorScheme.primary.withValues(alpha: 0.55)
-    ];
+      theme.colorScheme.primary.withValues(alpha: 0.55),
+    ]);
 
     final shadowColor = isRunning
         ? Colors.green
-        : theme.colorScheme.primary.withValues(alpha: 0.5);
+        : (isZh ? zhColor.withValues(alpha: 0.5) : theme.colorScheme.primary.withValues(alpha: 0.5));
 
     return Container(
       width: double.infinity,
@@ -554,8 +601,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                  classType,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)
+                classType,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
               ),
             ),
           Text(
@@ -582,7 +629,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// @description Builds the right stat box that constantly tracks the next upcoming class.
+  /// @description Builds the right stat box tracking the next immediate scheduled item.
   Widget _buildRightStatBox(ThemeData theme, bool isDark) {
     if (_nextClass == null) {
       return _buildStatBox(
@@ -626,13 +673,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Builds a square statistics box used for displaying daily metrics.
-  /// @param theme The current ThemeData context.
-  /// @param title The label for the statistic.
-  /// @param value The numerical value to display.
-  /// @param icon The IconData to display.
-  /// @param color The background color of the box.
-  /// @param onColor The text and icon color, ensuring high contrast against the background.
-  /// @returns A styled Container widget.
   Widget _buildStatBox({
     required ThemeData theme,
     required String title,
@@ -641,7 +681,6 @@ class _DashboardPageState extends State<DashboardPage> {
     required Color color,
     required Color onColor,
     VoidCallback? onTap,
-    bool isTimeValue = false,
   }) {
     return Material(
       color: color,
@@ -658,7 +697,7 @@ class _DashboardPageState extends State<DashboardPage> {
               const SizedBox(height: 16),
               Text(
                 value,
-                style: TextStyle(fontSize: isTimeValue ? 32 : 32, fontWeight: FontWeight.bold, color: onColor),
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(

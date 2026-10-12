@@ -41,6 +41,7 @@ void main() async {
   final lightColorInt = prefs.getInt('seedColorLight');
   final darkColorInt = prefs.getInt('seedColorDark');
   final amoledBlack = prefs.getBool('amoledBlack') ?? false;
+  final zhColorInt = prefs.getInt('zhColor');
 
   String? savedLang = prefs.getString('language');
   if (savedLang == null) {
@@ -56,6 +57,7 @@ void main() async {
     initialLightColor: lightColorInt != null ? Color(lightColorInt) : const Color(0xFF4F46E5),
     initialDarkColor: darkColorInt != null ? Color(darkColorInt) : const Color(0xFF4F46E5),
     initialAmoled: amoledBlack,
+    initialZhColor: zhColorInt != null ? Color(zhColorInt) : const Color(0xFFE11D48),
   ));
 }
 
@@ -70,6 +72,7 @@ class ZsebtunApp extends StatelessWidget {
   final Color initialLightColor;
   final Color initialDarkColor;
   final bool initialAmoled;
+  final Color initialZhColor;
 
   const ZsebtunApp({
     super.key,
@@ -80,6 +83,7 @@ class ZsebtunApp extends StatelessWidget {
     required this.initialLightColor,
     required this.initialDarkColor,
     required this.initialAmoled,
+    required this.initialZhColor,
   });
 
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
@@ -90,6 +94,7 @@ class ZsebtunApp extends StatelessWidget {
   static late ValueNotifier<Color> seedColorLightNotifier;
   static late ValueNotifier<Color> seedColorDarkNotifier;
   static late ValueNotifier<bool> amoledBlackNotifier;
+  static late ValueNotifier<Color> zhColorNotifier;
 
   /// @description Formats the currently selected language into a locale string required by the intl package.
   static String get localeString => languageNotifier.value == 'hu' ? 'hu_HU' : 'en_US';
@@ -98,7 +103,7 @@ class ZsebtunApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+      fontFamily: GoogleFonts.inter().fontFamily,
       appBarTheme: const AppBarTheme(centerTitle: false),
     );
   }
@@ -121,7 +126,7 @@ class ZsebtunApp extends StatelessWidget {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      fontFamily: GoogleFonts.inter().fontFamily,
       appBarTheme: const AppBarTheme(centerTitle: false),
     );
   }
@@ -136,6 +141,7 @@ class ZsebtunApp extends StatelessWidget {
     seedColorLightNotifier = ValueNotifier(initialLightColor);
     seedColorDarkNotifier = ValueNotifier(initialDarkColor);
     amoledBlackNotifier = ValueNotifier(initialAmoled);
+    zhColorNotifier = ValueNotifier(initialZhColor);
 
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -144,6 +150,7 @@ class ZsebtunApp extends StatelessWidget {
         seedColorLightNotifier,
         seedColorDarkNotifier,
         amoledBlackNotifier,
+        zhColorNotifier,
       ]),
       builder: (context, _) {
         return MaterialApp(
