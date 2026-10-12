@@ -6,13 +6,12 @@ import 'setup_page.dart';
 import '../services/github_update_service.dart';
 import 'settings_page_color_picker.dart';
 
-/// @description A dedicated page for user preferences, allowing them to toggle
-/// dark mode, change the application language, or log out by clearing their saved Neptun link.
+/// @description A dedicated settings page allowing users to configure theme, language,
+/// date and time formats, room naming, update checks, and debug simulation options.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
-  /// @description Clears the user's saved ICS link and empties the local database,
-  /// then navigates back to the initial setup screen by completely clearing the navigation stack.
+  /// @description Clears the user's saved ICS link and database events, navigating back to setup.
   /// @param context The build context used for navigation.
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
@@ -28,6 +27,9 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  /// @description Builds the scrollable list of application settings and preference tiles.
+  /// @param context The build context.
+  /// @returns The settings page widget tree.
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -43,34 +45,32 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         children: [
-          // --- UI ---
-
           ValueListenableBuilder<ThemeMode>(
-              valueListenable: ZsebtunApp.themeNotifier,
-              builder: (context, currentMode, child) {
-                final isDark = currentMode == ThemeMode.dark;
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(tr('dark_mode'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                  secondary: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: theme.colorScheme.onPrimaryContainer),
+            valueListenable: ZsebtunApp.themeNotifier,
+            builder: (context, currentMode, child) {
+              final isDark = currentMode == ThemeMode.dark;
+              return SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                title: Text(tr('dark_mode'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                secondary: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
                   ),
-                  value: isDark,
-                  activeThumbColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  tileColor: theme.colorScheme.surfaceContainerLowest,
-                  onChanged: (value) async {
-                    ZsebtunApp.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('isDark', value);
-                  },
-                );
-              }
+                  child: Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: theme.colorScheme.onPrimaryContainer),
+                ),
+                value: isDark,
+                activeThumbColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tileColor: theme.colorScheme.surfaceContainerLowest,
+                onChanged: (value) async {
+                  ZsebtunApp.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('isDark', value);
+                },
+              );
+            },
           ),
           const SizedBox(height: 12),
 
@@ -108,64 +108,176 @@ class SettingsPage extends StatelessWidget {
             ),
             title: Text(tr('language'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
             trailing: ValueListenableBuilder<String>(
-                valueListenable: ZsebtunApp.languageNotifier,
-                builder: (context, currentLang, child) {
-                  return DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: currentLang,
-                      dropdownColor: theme.colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(12),
-                      icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
-                      items: [
-                        DropdownMenuItem(value: 'hu', child: Text(tr('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
-                        DropdownMenuItem(value: 'en', child: Text(tr('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
-                      ],
-                      onChanged: (String? newLang) async {
-                        if (newLang != null) {
-                          ZsebtunApp.languageNotifier.value = newLang;
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setString('language', newLang);
-                        }
-                      },
-                    ),
-                  );
-                }
+              valueListenable: ZsebtunApp.languageNotifier,
+              builder: (context, currentLang, child) {
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: currentLang,
+                    dropdownColor: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
+                    items: [
+                      DropdownMenuItem(value: 'hu', child: Text(tr('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                      DropdownMenuItem(value: 'en', child: Text(tr('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                    ],
+                    onChanged: (String? newLang) async {
+                      if (newLang != null) {
+                        ZsebtunApp.languageNotifier.value = newLang;
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('language', newLang);
+                      }
+                    },
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 12),
 
-          // --- APP PREFERENCES ---
-
-          ValueListenableBuilder<bool>(
-              valueListenable: ZsebtunApp.newRoomsNotifier,
-              builder: (context, useNewRooms, child) {
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(tr('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                  subtitle: Text(tr('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                  secondary: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.meeting_room_rounded, color: theme.colorScheme.onPrimaryContainer),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: theme.colorScheme.surfaceContainerLowest,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.calendar_view_week_rounded, color: theme.colorScheme.onPrimaryContainer),
+            ),
+            title: Text(tr('first_day_of_week'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            trailing: ValueListenableBuilder<int>(
+              valueListenable: ZsebtunApp.firstDayOfWeekNotifier,
+              builder: (context, firstDay, child) {
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: firstDay,
+                    dropdownColor: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
+                    items: [
+                      DropdownMenuItem(value: 1, child: Text(tr('monday'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                      DropdownMenuItem(value: 0, child: Text(tr('sunday'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                    ],
+                    onChanged: (int? newDay) {
+                      if (newDay != null) {
+                        ZsebtunApp.setFirstDayOfWeek(newDay);
+                      }
+                    },
                   ),
-                  value: useNewRooms,
-                  activeThumbColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  tileColor: theme.colorScheme.surfaceContainerLowest,
-                  onChanged: (value) async {
-                    ZsebtunApp.newRoomsNotifier.value = value;
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('oldRooms', value);
-                  },
                 );
-              }
+              },
+            ),
           ),
           const SizedBox(height: 12),
 
-          // --- UPDATES & ACTIONS ---
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: theme.colorScheme.surfaceContainerLowest,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.access_time_rounded, color: theme.colorScheme.onSecondaryContainer),
+            ),
+            title: Text(tr('time_format'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            trailing: ValueListenableBuilder<bool>(
+              valueListenable: ZsebtunApp.use24HourFormatNotifier,
+              builder: (context, use24h, child) {
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<bool>(
+                    value: use24h,
+                    dropdownColor: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
+                    items: [
+                      DropdownMenuItem(value: true, child: Text(tr('format_24h'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                      DropdownMenuItem(value: false, child: Text(tr('format_12h'), style: TextStyle(color: theme.colorScheme.onSurface))),
+                    ],
+                    onChanged: (bool? newVal) {
+                      if (newVal != null) {
+                        ZsebtunApp.setUse24HourFormat(newVal);
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: theme.colorScheme.surfaceContainerLowest,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.tertiaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.calendar_today_rounded, color: theme.colorScheme.onTertiaryContainer),
+            ),
+            title: Text(tr('date_format_setting'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            trailing: ValueListenableBuilder<String>(
+              valueListenable: ZsebtunApp.dateFormatNotifier,
+              builder: (context, currentPattern, child) {
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: currentPattern,
+                    dropdownColor: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
+                    items: [
+                      DropdownMenuItem(value: 'yyyy. MM. dd.', child: Text('yyyy. MM. dd.', style: TextStyle(color: theme.colorScheme.onSurface))),
+                      DropdownMenuItem(value: 'yyyy-MM-dd', child: Text('yyyy-MM-dd', style: TextStyle(color: theme.colorScheme.onSurface))),
+                      DropdownMenuItem(value: 'dd.MM.yyyy', child: Text('dd.MM.yyyy', style: TextStyle(color: theme.colorScheme.onSurface))),
+                      DropdownMenuItem(value: 'MM/dd/yyyy', child: Text('MM/dd/yyyy', style: TextStyle(color: theme.colorScheme.onSurface))),
+                    ],
+                    onChanged: (String? newPattern) {
+                      if (newPattern != null) {
+                        ZsebtunApp.setDateFormat(newPattern);
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          ValueListenableBuilder<bool>(
+            valueListenable: ZsebtunApp.newRoomsNotifier,
+            builder: (context, useNewRooms, child) {
+              return SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                title: Text(tr('use_new_rooms'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                subtitle: Text(tr('use_new_rooms_desc'), style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                secondary: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.meeting_room_rounded, color: theme.colorScheme.onPrimaryContainer),
+                ),
+                value: useNewRooms,
+                activeThumbColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tileColor: theme.colorScheme.surfaceContainerLowest,
+                onChanged: (value) async {
+                  ZsebtunApp.newRoomsNotifier.value = value;
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('oldRooms', value);
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 12),
 
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -197,8 +309,6 @@ class SettingsPage extends StatelessWidget {
             onTap: () => _logout(context),
           ),
 
-          // --- DEBUG ---
-
           Padding(
             padding: const EdgeInsets.only(left: 16, bottom: 8, top: 24),
             child: Text(
@@ -208,60 +318,59 @@ class SettingsPage extends StatelessWidget {
           ),
 
           ValueListenableBuilder<int>(
-              valueListenable: ZsebtunApp.debugDayOffsetNotifier,
-              builder: (context, offset, child) {
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  tileColor: theme.colorScheme.surfaceContainerLowest,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      shape: BoxShape.circle,
+            valueListenable: ZsebtunApp.debugDayOffsetNotifier,
+            builder: (context, offset, child) {
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tileColor: theme.colorScheme.surfaceContainerLowest,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.bug_report_rounded, color: theme.colorScheme.onErrorContainer),
+                ),
+                title: Text(tr('debug_day_offset'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline_rounded),
+                      onPressed: () async {
+                        final newVal = offset - 1;
+                        ZsebtunApp.debugDayOffsetNotifier.value = newVal;
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setInt('debugDayOffset', newVal);
+                      },
                     ),
-                    child: Icon(Icons.bug_report_rounded, color: theme.colorScheme.onErrorContainer),
-                  ),
-                  title: Text(tr('debug_day_offset'), style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline_rounded),
-                        onPressed: () async {
-                          final newVal = offset - 1;
-                          ZsebtunApp.debugDayOffsetNotifier.value = newVal;
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setInt('debugDayOffset', newVal);
-                        },
+                    SizedBox(
+                      width: 40,
+                      child: Text(
+                        offset > 0 ? '+$offset' : '$offset',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
-                      SizedBox(
-                        width: 40,
-                        child: Text(
-                          offset > 0 ? '+$offset' : '$offset',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                        onPressed: () async {
-                          final newVal = offset + 1;
-                          ZsebtunApp.debugDayOffsetNotifier.value = newVal;
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setInt('debugDayOffset', newVal);
-                        },
-                      ),
-                    ],
-                  ),
-                  onLongPress: () async {
-                    // Quick reset to 0 on long press
-                    ZsebtunApp.debugDayOffsetNotifier.value = 0;
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setInt('debugDayOffset', 0);
-                  },
-                );
-              }
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      onPressed: () async {
+                        final newVal = offset + 1;
+                        ZsebtunApp.debugDayOffsetNotifier.value = newVal;
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setInt('debugDayOffset', newVal);
+                      },
+                    ),
+                  ],
+                ),
+                onLongPress: () async {
+                  ZsebtunApp.debugDayOffsetNotifier.value = 0;
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setInt('debugDayOffset', 0);
+                },
+              );
+            },
           ),
         ],
       ),

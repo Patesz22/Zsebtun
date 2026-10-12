@@ -19,6 +19,15 @@
     "zh_color": "ZH & Exam Color",
     "zh_color_desc": "Highlight color for midterms in calendar and dashboard",
 
+    "date_time_settings": "Date & Time Settings",
+    "first_day_of_week": "First Day of the Week",
+    "monday": "Monday",
+    "sunday": "Sunday",
+    "time_format": "Time Format",
+    "format_24h": "24-Hour (18:00)",
+    "format_12h": "12-Hour (6:00 PM)",
+    "date_format_setting": "Date Format",
+
     "use_new_rooms": "New Room Format",
     "use_new_rooms_desc": "Display the new room names (e.g., I-B-F-28)",
 
@@ -111,6 +120,15 @@
     "amoled_desc": "Valódi fekete háttér sötét módban",
     "zh_color": "ZH és vizsga színe",
     "zh_color_desc": "Kiemelő szín a zárthelyiknek a naptárban és a kezdőlapon",
+
+    "date_time_settings": "Dátum és idő beállítások",
+    "first_day_of_week": "A hét első napja",
+    "monday": "Hétfő",
+    "sunday": "Vasárnap",
+    "time_format": "Időformátum",
+    "format_24h": "24 órás (18:00)",
+    "format_12h": "12 órás (6:00 PM)",
+    "date_format_setting": "Dátumformátum",
 
     "use_new_rooms": "Új teremformátum",
     "use_new_rooms_desc": "Új terem nevek mutatása (pl. I-B-F-28)",
