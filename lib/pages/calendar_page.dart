@@ -1,26 +1,26 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 import '../main.dart';
-import 'setup_page.dart';
-import 'settings_page.dart';
 import '../database/db_helper.dart';
 import '../services/ics_parser_service.dart';
 import '../services/room_formatter_service.dart';
+import 'setup_page.dart';
+import 'settings_page.dart';
+import 'zh_add_edit_page.dart';
 
 /// @description The full schedule view that allows users to navigate through their
-/// classes using a monthly or weekly calendar, and view daily event details.
+/// classes and exams using a monthly, weekly, or daily view.
 class CalendarPage extends StatefulWidget {
-  /// @description Optional list of events passed from the Dashboard to eliminate
-  /// database loading time during page navigation.
   final List<Map<String, dynamic>>? preloadedEvents;
 
   const CalendarPage({super.key, this.preloadedEvents});
 
+  /// @description Creates the mutable state object for CalendarPage.
   @override
   State<CalendarPage> createState() => _CalendarPageState();
 }
@@ -32,8 +32,10 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime? _selectedDay;
 
   Map<DateTime, List<Map<String, dynamic>>> _groupedEvents = {};
+  List<String> _preloadedSubjects = [];
   late bool _isLoading;
 
+  /// @description Initializes calendar state, date selection, and triggers offline/remote event loading.
   @override
   void initState() {
     super.initState();
@@ -42,13 +44,12 @@ class _CalendarPageState extends State<CalendarPage> {
     if (widget.preloadedEvents != null && widget.preloadedEvents!.isNotEmpty) {
       _isLoading = false;
       _groupEventsByDate(widget.preloadedEvents!);
+      _loadSubjectsOnly();
     } else {
       _isLoading = true;
       _loadOfflineEvents();
     }
 
-    // Defer the heavy network request and ICS parsing until after the
-    // page transition animation completes to prevent UI stuttering.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted) _fetchCalendar();
@@ -56,12 +57,26 @@ class _CalendarPageState extends State<CalendarPage> {
     });
   }
 
-  /// @description Retrieves saved events from the local SQLite database.
+  /// @description Asynchronously loads semester subject names for quick auto-fill when editing exams.
+  Future<void> _loadSubjectsOnly() async {
+    try {
+      final subjects = await DatabaseHelper.instance.getCurrentSemesterSubjects();
+      if (mounted) {
+        setState(() {
+          _preloadedSubjects = subjects;
+        });
+      }
+    } catch (_) {}
+  }
+
+  /// @description Retrieves saved classes and exams from the local SQLite database.
   Future<void> _loadOfflineEvents() async {
     final offlineEvents = await DatabaseHelper.instance.getEvents();
-    if (offlineEvents.isNotEmpty) {
+    final subjects = await DatabaseHelper.instance.getCurrentSemesterSubjects();
+    if (offlineEvents.isNotEmpty && mounted) {
       _groupEventsByDate(offlineEvents);
       setState(() {
+        _preloadedSubjects = subjects;
         _isLoading = false;
       });
     }
@@ -88,23 +103,25 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
-  /// @description Parses the downloaded ICS data using the IcsParserService,
-  /// saves the new events to the database, and refreshes the UI.
+  /// @description Parses downloaded ICS data, saves classes without deleting manual ZHs, and refreshes the UI.
   /// @param icsData The raw multi-line string content of the .ics file.
   Future<void> _parseICS(String icsData) async {
     final formattedEvents = IcsParserService.parseNeptunIcs(icsData);
     await DatabaseHelper.instance.saveEvents(formattedEvents);
 
+    final allEvents = await DatabaseHelper.instance.getEvents();
+    final subjects = await DatabaseHelper.instance.getCurrentSemesterSubjects();
+
     if (mounted) {
-      _groupEventsByDate(formattedEvents);
+      _groupEventsByDate(allEvents);
       setState(() {
+        _preloadedSubjects = subjects;
         _isLoading = false;
       });
     }
   }
 
-  /// @description Groups a flat list of events into a Map indexed by the date (ignoring time)
-  /// to allow quick lookup by the TableCalendar widget.
+  /// @description Groups a flat list of events into a Map indexed by date for TableCalendar lookups.
   /// @param flatEvents A list of un-grouped event maps.
   void _groupEventsByDate(List<Map<String, dynamic>> flatEvents) {
     Map<DateTime, List<Map<String, dynamic>>> newGroups = {};
@@ -154,14 +171,42 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
-  /// @description Displays a bottom sheet modal containing full details of a clicked event.
+  /// @description Opens the editor for a manual ZH entry and updates the calendar on save.
+  /// @param context The build context used for navigation.
+  /// @param event The map representing the exam entry.
+  Future<void> _editZhEvent(BuildContext context, Map<String, dynamic> event) async {
+    Navigator.pop(context);
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ZhAddEditPage(
+          existingEvent: event,
+          preloadedSubjects: _preloadedSubjects,
+        ),
+      ),
+    );
+    if (changed == true) {
+      await _loadOfflineEvents();
+    }
+  }
+
+  /// @description Displays a bottom sheet modal containing full details of a clicked event or exam.
   /// @param context The build context for the modal.
-  /// @param event The data map representing the clicked class.
+  /// @param event The data map representing the clicked class or exam.
   void _showEventDetails(BuildContext context, Map<String, dynamic> event) {
     final theme = Theme.of(context);
-    final startTime = DateFormat('HH:mm').format(event['dtstart'] as DateTime);
-    final endTime = DateFormat('HH:mm').format(event['dtend'] as DateTime);
-    final date = DateFormat(tr('date_format'), ZsebtunApp.localeString).format(event['dtstart'] as DateTime);
+    final dtStart = event['dtstart'] as DateTime;
+    final dtEnd = event['dtend'] as DateTime;
+
+    final startTime = ZsebtunApp.formatTime(dtStart);
+    final endTime = ZsebtunApp.formatTime(dtEnd);
+    final date = '${ZsebtunApp.formatDate(dtStart)} (${DateFormat('EEEE', ZsebtunApp.localeString).format(dtStart)})';
+
+    final isZh = event['isZh'] == 1 || event['classType'] == 'ZH';
+    final defaultZhColor = ZsebtunApp.zhColorNotifier.value;
+    final eventColor = isZh
+        ? (event['color'] != null ? Color(event['color'] as int) : defaultZhColor)
+        : theme.colorScheme.primary;
 
     final className = event['className'] ?? tr('unknown_class');
     final classType = event['classType']?.toString() ?? '';
@@ -181,36 +226,57 @@ class _CalendarPageState extends State<CalendarPage> {
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: ValueListenableBuilder<bool>(
-                valueListenable: ZsebtunApp.newRoomsNotifier,
-                builder: (context, useNewRooms, child) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(2),
+              valueListenable: ZsebtunApp.newRoomsNotifier,
+              builder: (context, useNewRooms, child) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            className,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        className,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
+                        if (isZh)
+                          IconButton(
+                            icon: Icon(Icons.edit_outlined, color: eventColor),
+                            tooltip: tr('edit_zh'),
+                            onPressed: () => _editZhEvent(context, event),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (isZh)
+                          Chip(
+                            label: Text(eventType.isNotEmpty ? eventType : 'ZH'),
+                            backgroundColor: eventColor.withValues(alpha: 0.18),
+                            labelStyle: TextStyle(color: eventColor, fontWeight: FontWeight.bold, fontSize: 12),
+                            side: BorderSide(color: eventColor.withValues(alpha: 0.4)),
+                          )
+                        else ...[
                           if (classType.isNotEmpty)
                             Chip(
                               label: Text(classType),
@@ -226,29 +292,38 @@ class _CalendarPageState extends State<CalendarPage> {
                               side: BorderSide.none,
                             ),
                         ],
-                      ),
-                      const SizedBox(height: 32),
-                      _buildDetailRow(theme, Icons.access_time_rounded, '$date\n$startTime - $endTime'),
-                      const SizedBox(height: 20),
-                      if (roomsList.isNotEmpty)
-                        _buildDetailRow(
-                            theme,
-                            Icons.location_on_rounded,
-                            roomsList.map((r) => '${useNewRooms ? r['raw'] : RoomFormatterService.formatRoomName(r['raw'])}  •  ${r['floor']}').join('\n')
-                        )
-                      else
-                        _buildDetailRow(theme, Icons.location_off_rounded, tr('unknown_room')),
-                      const SizedBox(height: 20),
-                      if (teachers.isNotEmpty)
-                        _buildDetailRow(
-                            theme,
-                            Icons.person_rounded,
-                            teachers.join('\n')
-                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildDetailRow(theme, Icons.access_time_rounded, '$date\n$startTime - $endTime'),
+                    const SizedBox(height: 16),
+                    if (roomsList.isNotEmpty)
+                      _buildDetailRow(
+                        theme,
+                        Icons.location_on_rounded,
+                        roomsList.map((r) {
+                          final raw = r is Map ? (r['raw']?.toString() ?? '') : r.toString();
+                          final formatted = useNewRooms ? raw : RoomFormatterService.formatRoomName(raw);
+                          final floor = (r is Map && r['floor'] != null && r['floor'].toString().isNotEmpty)
+                              ? ' (${r['floor']})'
+                              : '';
+                          return '$formatted$floor';
+                        }).join('\n'),
+                      )
+                    else
+                      _buildDetailRow(theme, Icons.location_off_rounded, tr('unknown_room')),
+                    if (teachers.isNotEmpty) ...[
                       const SizedBox(height: 16),
+                      _buildDetailRow(
+                        theme,
+                        Icons.person_rounded,
+                        teachers.map((t) => t.toString()).join('\n'),
+                      ),
                     ],
-                  );
-                }
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -282,6 +357,9 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
+  /// @description Builds the entire calendar page widget tree including calendar picker and event cards.
+  /// @param context The build context.
+  /// @returns The complete scaffold widget.
   @override
   Widget build(BuildContext context) {
     final selectedDayEvents = _selectedDay != null ? _getEventsForDay(_selectedDay!) : [];
@@ -327,8 +405,8 @@ class _CalendarPageState extends State<CalendarPage> {
           IconButton(
             icon: Icon(Icons.settings_outlined, color: theme.colorScheme.onSurface),
             onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsPage())
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsPage()),
             ),
             tooltip: tr('settings'),
           ),
@@ -340,54 +418,104 @@ class _CalendarPageState extends State<CalendarPage> {
           : Column(
         children: [
           if (_selectedView != 'daily')
-            Container(
-              color: theme.colorScheme.surface,
-              child: TableCalendar(
-                locale: ZsebtunApp.localeString,
-                firstDay: DateTime(currentYear - 3, 1, 1),
-                lastDay: DateTime(currentYear + 3, 12, 31),
-                focusedDay: _focusedDay,
-                calendarFormat: _calendarFormat,
-                startingDayOfWeek: StartingDayOfWeek.monday,
-                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
-                },
-                eventLoader: _getEventsForDay,
-                headerStyle: HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                  titleTextStyle: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
-                  leftChevronIcon: Icon(Icons.chevron_left, color: theme.colorScheme.onSurface),
-                  rightChevronIcon: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface),
-                ),
-                daysOfWeekStyle: DaysOfWeekStyle(
-                  weekdayStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
-                  weekendStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontWeight: FontWeight.bold),
-                ),
-                calendarStyle: CalendarStyle(
-                  defaultTextStyle: TextStyle(color: theme.colorScheme.onSurface),
-                  weekendTextStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
-                  outsideTextStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-                  selectedDecoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
+            ValueListenableBuilder<int>(
+              valueListenable: ZsebtunApp.firstDayOfWeekNotifier,
+              builder: (context, firstDayOfWeek, _) {
+                return Container(
+                  color: theme.colorScheme.surface,
+                  child: TableCalendar(
+                    locale: ZsebtunApp.localeString,
+                    firstDay: DateTime(currentYear - 3, 1, 1),
+                    lastDay: DateTime(currentYear + 3, 12, 31),
+                    focusedDay: _focusedDay,
+                    calendarFormat: _calendarFormat,
+                    startingDayOfWeek: firstDayOfWeek == 1
+                        ? StartingDayOfWeek.monday
+                        : StartingDayOfWeek.sunday,
+                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                    onDaySelected: (selectedDay, focusedDay) {
+                      setState(() {
+                        _selectedDay = selectedDay;
+                        _focusedDay = focusedDay;
+                      });
+                    },
+                    eventLoader: _getEventsForDay,
+                    calendarBuilders: CalendarBuilders(
+                      markerBuilder: (context, date, events) {
+                        if (events.isEmpty) return null;
+                        final maxVisibleDots = events.length > 5 ? 5 : events.length;
+                        final visibleEvents = events.take(maxVisibleDots).toList();
+
+                        return Positioned(
+                          bottom: 2,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: visibleEvents.map((e) {
+                              final map = e as Map<String, dynamic>;
+                              final isZh = map['isZh'] == 1 || map['classType'] == 'ZH';
+                              final dotColor = isZh
+                                  ? (map['color'] != null
+                                  ? Color(map['color'] as int)
+                                  : ZsebtunApp.zhColorNotifier.value)
+                                  : theme.colorScheme.tertiary;
+
+                              return Container(
+                                width: 4.5,
+                                height: 4.5,
+                                margin: const EdgeInsets.symmetric(horizontal: 1),
+                                decoration: BoxDecoration(
+                                  color: dotColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
+                    ),
+                    headerStyle: HeaderStyle(
+                      formatButtonVisible: false,
+                      titleCentered: true,
+                      titleTextStyle: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      leftChevronIcon: Icon(Icons.chevron_left, color: theme.colorScheme.onSurface),
+                      rightChevronIcon: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface),
+                    ),
+                    daysOfWeekStyle: DaysOfWeekStyle(
+                      weekdayStyle: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      weekendStyle: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    calendarStyle: CalendarStyle(
+                      defaultTextStyle: TextStyle(color: theme.colorScheme.onSurface),
+                      weekendTextStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+                      outsideTextStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                      selectedDecoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      selectedTextStyle: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                      todayDecoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      todayTextStyle: TextStyle(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  selectedTextStyle: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
-                  todayDecoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  todayTextStyle: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
-                  markerDecoration: BoxDecoration(
-                    color: theme.colorScheme.tertiary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
+                );
+              },
             ),
 
           Container(
@@ -395,7 +523,9 @@ class _CalendarPageState extends State<CalendarPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerLowest,
-              border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
+              border: Border(
+                top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -415,7 +545,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 Expanded(
                   child: Text(
                     _selectedDay != null
-                        ? DateFormat(tr('date_format'), ZsebtunApp.localeString).format(_selectedDay!)
+                        ? '${ZsebtunApp.formatDate(_selectedDay!)} (${DateFormat('EEEE', ZsebtunApp.localeString).format(_selectedDay!)})'
                         : tr('select_day'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -457,157 +587,201 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               )
                   : ValueListenableBuilder<bool>(
-                  valueListenable: ZsebtunApp.newRoomsNotifier,
-                  builder: (context, useNewRooms, child) {
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: selectedDayEvents.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final event = selectedDayEvents[index];
-                        final startTime = DateFormat('HH:mm').format(event['dtstart'] as DateTime);
-                        final endTime = DateFormat('HH:mm').format(event['dtend'] as DateTime);
+                valueListenable: ZsebtunApp.newRoomsNotifier,
+                builder: (context, useNewRooms, child) {
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: selectedDayEvents.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final event = selectedDayEvents[index];
+                      final dtStart = event['dtstart'] as DateTime;
+                      final dtEnd = event['dtend'] as DateTime;
 
-                        final className = event['className'] ?? tr('unknown_class');
-                        final classType = event['classType']?.toString() ?? '';
-                        final roomsList = event['rooms'] as List<dynamic>? ?? [];
+                      final startTime = ZsebtunApp.formatTime(dtStart);
+                      final endTime = ZsebtunApp.formatTime(dtEnd);
 
-                        // SAFE FORMATTING: Explicitly cast dynamic raw values to Strings
-                        final location = roomsList.isNotEmpty
-                            ? roomsList.map((r) => useNewRooms
-                            ? r['raw'].toString()
-                            : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
-                            : tr('unknown_room');
+                      final isZh = event['isZh'] == 1 || event['classType'] == 'ZH';
+                      final defaultZhColor = ZsebtunApp.zhColorNotifier.value;
+                      final itemColor = isZh
+                          ? (event['color'] != null ? Color(event['color'] as int) : defaultZhColor)
+                          : theme.colorScheme.primary;
 
-                        final teachers = event['teachers'] as List<dynamic>? ?? [];
+                      final className = event['className'] ?? tr('unknown_class');
+                      final classType = event['classType']?.toString() ?? '';
+                      final eventType = event['eventType']?.toString() ?? '';
+                      final roomsList = event['rooms'] as List<dynamic>? ?? [];
 
-                        return Container(
-                          decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainer,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2))
-                              ]
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () => _showEventDetails(context, event),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      width: 56,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            startTime,
-                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.primary),
+                      final location = roomsList.isNotEmpty
+                          ? roomsList.map((r) {
+                        final raw = r is Map ? (r['raw']?.toString() ?? '') : r.toString();
+                        return useNewRooms ? raw : RoomFormatterService.formatRoomName(raw);
+                      }).join(', ')
+                          : tr('unknown_room');
+
+                      final teachers = event['teachers'] as List<dynamic>? ?? [];
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: isZh
+                              ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35)
+                              : theme.colorScheme.surfaceContainer,
+                          borderRadius: BorderRadius.circular(16),
+                          border: isZh
+                              ? Border.all(color: itemColor.withValues(alpha: 0.4), width: 1.5)
+                              : null,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => _showEventDetails(context, event),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 68,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          startTime,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            color: itemColor,
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            endTime,
-                                            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          endTime,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: theme.colorScheme.onSurfaceVariant,
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                    Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                                      width: 3,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.tertiary,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
+                                  ),
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                                    width: 3,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: isZh ? itemColor : theme.colorScheme.tertiary,
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Wrap(
-                                            crossAxisAlignment: WrapCrossAlignment.center,
-                                            spacing: 8,
-                                            children: [
-                                              Text(
-                                                className,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color: theme.colorScheme.onSurface,
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Wrap(
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          spacing: 8,
+                                          children: [
+                                            Text(
+                                              className,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: theme.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            if (isZh)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: itemColor.withValues(alpha: 0.18),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  eventType.isNotEmpty ? eventType : 'ZH',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: itemColor,
+                                                  ),
+                                                ),
+                                              )
+                                            else if (classType.isNotEmpty)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: theme.colorScheme.secondaryContainer,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  classType,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: theme.colorScheme.onSecondaryContainer,
+                                                  ),
                                                 ),
                                               ),
-                                              if (classType.isNotEmpty)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: theme.colorScheme.secondaryContainer,
-                                                    borderRadius: BorderRadius.circular(6),
-                                                  ),
-                                                  child: Text(
-                                                      classType,
-                                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSecondaryContainer)
-                                                  ),
-                                                )
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                location,
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.onSurfaceVariant,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (teachers.isNotEmpty) ...[
+                                          const SizedBox(height: 6),
                                           Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                              Icon(Icons.person, size: 14, color: theme.colorScheme.onSurfaceVariant),
                                               const SizedBox(width: 4),
                                               Expanded(
                                                 child: Text(
-                                                  location,
+                                                  teachers.map((t) => t.toString()).join(', '),
                                                   style: TextStyle(
                                                     color: theme.colorScheme.onSurfaceVariant,
                                                     fontSize: 13,
-                                                    fontWeight: FontWeight.w500,
                                                   ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ],
                                           ),
-
-                                          if (teachers.isNotEmpty) ...[
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Icon(Icons.person, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                                                const SizedBox(width: 4),
-                                                Expanded(
-                                                  child: Text(
-                                                    teachers.join(', '),
-                                                    style: TextStyle(
-                                                      color: theme.colorScheme.onSurfaceVariant,
-                                                      fontSize: 13,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ]
                                         ],
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        );
-                      },
-                    );
-                  }
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ),
