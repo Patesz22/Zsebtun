@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'pages/setup_page.dart';
+import 'package:zsebtun/pages/setup_page.dart';
 
 /// @description Global dictionary storing all application translations.
 /// Populated dynamically at startup from assets/translations.json.
@@ -25,15 +25,18 @@ String tr(String key) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final String jsonString = await rootBundle.loadString('assets/translations.json');
-  final Map<String, dynamic> rawMap = jsonDecode(jsonString);
+  final jsonString = await rootBundle.loadString('assets/translations.json');
+  final rawMap = jsonDecode(jsonString) as Map<String, dynamic>;
   localizedStrings = rawMap.map(
-        (lang, map) => MapEntry(lang, Map<String, String>.from(map as Map)),
+        (lang, map) => MapEntry(
+      lang,
+      Map<String, String>.from(map as Map<dynamic, dynamic>),
+    ),
   );
 
-  await initializeDateFormatting('en_US', null);
-  await initializeDateFormatting('en_GB', null);
-  await initializeDateFormatting('hu_HU', null);
+  await initializeDateFormatting('en_US');
+  await initializeDateFormatting('en_GB');
+  await initializeDateFormatting('hu_HU');
 
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('isDark') ?? false;
@@ -49,9 +52,9 @@ void main() async {
   final use24Hour = prefs.getBool('use_24h_format') ?? true;
   final dateFormatPattern = prefs.getString('date_format_pattern') ?? 'yyyy. MM. dd.';
 
-  String? savedLang = prefs.getString('language');
+  var savedLang = prefs.getString('language');
   if (savedLang == null) {
-    final String deviceLang = Platform.localeName.split('_')[0];
+    final deviceLang = Platform.localeName.split('_')[0];
     savedLang = (deviceLang == 'hu') ? 'hu' : 'en';
   }
 
@@ -72,6 +75,10 @@ void main() async {
 
 /// @description The root widget of the application providing global theme, language, and format management.
 class ZsebtunApp extends StatelessWidget {
+
+  const ZsebtunApp({
+    required this.isDark, required this.initialLang, required this.oldRooms, required this.debugDayOffset, required this.initialLightColor, required this.initialDarkColor, required this.initialAmoled, required this.initialZhColor, required this.initialFirstDayOfWeek, required this.initialUse24Hour, required this.initialDateFormat, super.key,
+  });
   final bool isDark;
   final String initialLang;
   final bool oldRooms;
@@ -83,21 +90,6 @@ class ZsebtunApp extends StatelessWidget {
   final int initialFirstDayOfWeek;
   final bool initialUse24Hour;
   final String initialDateFormat;
-
-  const ZsebtunApp({
-    super.key,
-    required this.isDark,
-    required this.initialLang,
-    required this.oldRooms,
-    required this.debugDayOffset,
-    required this.initialLightColor,
-    required this.initialDarkColor,
-    required this.initialAmoled,
-    required this.initialZhColor,
-    required this.initialFirstDayOfWeek,
-    required this.initialUse24Hour,
-    required this.initialDateFormat,
-  });
 
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
   static final ValueNotifier<bool> newRoomsNotifier = ValueNotifier(true);
@@ -185,7 +177,7 @@ class ZsebtunApp extends StatelessWidget {
   ThemeData _buildLightTheme(Color seed) {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
+      colorScheme: ColorScheme.fromSeed(seedColor: seed),
       fontFamily: GoogleFonts.inter().fontFamily,
       appBarTheme: const AppBarTheme(centerTitle: false),
     );
