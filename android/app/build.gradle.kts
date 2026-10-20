@@ -58,3 +58,23 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+
+tasks.register<Exec>("runFlutterUnitTests") {
+    description = "Executes Flutter unit tests prior to Android APK compilation."
+    workingDir = rootProject.projectDir.parentFile
+    if (isWindows) {
+        commandLine("cmd", "/c", "flutter", "test")
+    } else {
+        commandLine("flutter", "test")
+    }
+}
+
+gradle.projectsEvaluated {
+    tasks.matching { task ->
+        task.name.startsWith("assemble") || task.name.startsWith("bundle")
+    }.configureEach {
+        dependsOn("runFlutterUnitTests")
+    }
+}
