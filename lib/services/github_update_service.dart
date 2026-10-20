@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../main.dart';
+import 'package:zsebtun/main.dart';
 
 /// @description Service to check GitHub for new app releases and redirect the user.
 /// Complies with Android store policies by avoiding direct APK background downloads.
@@ -52,8 +52,8 @@ class GithubUpdateService {
   /// @returns True if the GitHub version is mathematically higher.
   static bool _isNewerVersion(String current, String latest) {
     try {
-      String cleanCurrent = current.toLowerCase().replaceAll('v', '');
-      String cleanLatest = latest.toLowerCase().replaceAll('v', '');
+      var cleanCurrent = current.toLowerCase().replaceAll('v', '');
+      var cleanLatest = latest.toLowerCase().replaceAll('v', '');
 
       cleanCurrent = cleanCurrent.split('+')[0].split('-')[0];
       cleanLatest = cleanLatest.split('+')[0].split('-')[0];
@@ -65,7 +65,7 @@ class GithubUpdateService {
           ? currParts.length
           : latParts.length;
 
-      for (int i = 0; i < maxLength; i++) {
+      for (var i = 0; i < maxLength; i++) {
         // Pad missing sub-versions with 0 (so 1.0 == 1.0.0)
         final currVal = i < currParts.length ? currParts[i] : 0;
         final latVal = i < latParts.length ? latParts[i] : 0;
@@ -113,7 +113,7 @@ class GithubUpdateService {
   static Future<void> _launchGitHub(BuildContext context) async {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('downloading'))));
 
-    final Uri url = Uri.parse(_releaseUrl);
+    final url = Uri.parse(_releaseUrl);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       debugPrint('Could not launch $url');
     }

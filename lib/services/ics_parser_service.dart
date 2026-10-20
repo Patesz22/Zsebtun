@@ -3,14 +3,14 @@ import 'package:flutter/foundation.dart';
 /// @description Service for parsing Neptun-specific ICS calendar exports using Regular Expressions.
 class IcsParserService {
   static final _unfoldRegex = RegExp(r'\r?\n ');
-  static final _veventRegex = RegExp(r'BEGIN:VEVENT(.*?)END:VEVENT', dotAll: true);
+  static final _veventRegex = RegExp('BEGIN:VEVENT(.*?)END:VEVENT', dotAll: true);
 
   static final _dtstartRegex = RegExp(r'DTSTART.*?:([^\r\n]+)');
   static final _dtendRegex = RegExp(r'DTEND.*?:([^\r\n]+)');
   static final _locationRegex = RegExp(r'LOCATION:([^\r\n]*)');
   static final _summaryRegex = RegExp(r'SUMMARY:([^\r\n]+)');
 
-  static final _adminTaskRegex = RegExp(r'Határidő');
+  static final _adminTaskRegex = RegExp('Határidő');
   static final _fullSummaryRegex = RegExp(r'^(.*?)\s*\((.*?)\)\s*-\s*(.*?)\s*-\s*(.*)$');
   static final _noTeacherSummaryRegex = RegExp(r'^(.*?)\s*\((.*?)\)\s*-\s*(.*)$');
 
@@ -22,7 +22,7 @@ class IcsParserService {
   /// @param icsData The raw multi-line string content of the .ics file.
   /// @returns A chronologically sorted list of event maps containing separated class data.
   static List<Map<String, dynamic>> parseNeptunIcs(String icsData) {
-    List<Map<String, dynamic>> parsedEvents = [];
+    final parsedEvents = <Map<String, dynamic>>[];
 
     // Fix ICS multi-line formatting before passing to extraction regex
     final unfoldedData = icsData.replaceAll(_unfoldRegex, '');
@@ -36,7 +36,7 @@ class IcsParserService {
 
       if (_adminTaskRegex.hasMatch(summaryStr)) continue;
 
-      Map<String, dynamic> currentEvent = {};
+      final currentEvent = <String, dynamic>{};
 
       final fullMatch = _fullSummaryRegex.firstMatch(summaryStr);
       final noTeacherMatch = _noTeacherSummaryRegex.firstMatch(summaryStr);
@@ -44,7 +44,7 @@ class IcsParserService {
       if (fullMatch != null) {
         currentEvent['className'] = fullMatch.group(1)?.trim();
         currentEvent['classType'] = fullMatch.group(2)?.replaceAll('-', '').trim();
-        currentEvent['teachers'] = fullMatch.group(3)?.split(RegExp(r'[;,]')).map((e) => e.trim()).toList() ?? [];
+        currentEvent['teachers'] = fullMatch.group(3)?.split(RegExp('[;,]')).map((e) => e.trim()).toList() ?? [];
         currentEvent['eventType'] = fullMatch.group(4)?.trim();
       } else if (noTeacherMatch != null) {
         currentEvent['className'] = noTeacherMatch.group(1)?.trim();
@@ -107,7 +107,7 @@ class IcsParserService {
   /// @param room The raw room identifier string ('IB028', 'Q-AB-2-I').
   /// @returns A map containing both the raw room identifier and the calculated floor string.
   static Map<String, String> _parseRoomData(String room) {
-    String floor = "?";
+    var floor = '?';
 
     if (_iBuildingRegex.hasMatch(room)) {
       final match = _iBuildingRegex.firstMatch(room)!.group(1)!;

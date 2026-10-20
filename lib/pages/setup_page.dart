@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
-import 'dashboard_page.dart';
+import 'package:zsebtun/main.dart';
+import 'package:zsebtun/pages/dashboard_page.dart';
 
 /// @description The initial routing and onboarding page of the application.
 /// It checks if the user has already saved a calendar link; if so, it silently
@@ -84,7 +84,7 @@ class _SetupPageState extends State<SetupPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

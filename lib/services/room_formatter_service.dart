@@ -42,10 +42,10 @@ class RoomFormatterService {
       final building = match.group(1)!;
       final wing = match.group(2) ?? '';
 
-      String floor = match.group(3)!;
+      var floor = match.group(3)!;
       if (floor == 'F') floor = '0'; // Convert Ground Floor (F) to 0
 
-      String room = match.group(4)!;
+      var room = match.group(4)!;
 
       // Clean up redundancy (Floor 4, Room 406 -> Room 06)
       if (room.startsWith(floor) && room.length > floor.length) {

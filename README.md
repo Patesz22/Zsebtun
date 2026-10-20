@@ -3,6 +3,18 @@
 ### Mobil órarend app, egyetemi Neptun tanulmányi rendszerhez.
 ### A modern mobile schedule application for the Neptun university system.
 
+[![Github All Releases](https://img.shields.io/github/downloads/Patesz22/Zsebtun/total.svg)]()
+
+> [!IMPORTANT]
+> ## Legal Disclaimer & Non-Affiliation Notice
+> 
+> **Zsebtun** is an independent, open-source project and is not an official client application.
+> 
+> The developers of this application are not affiliated with, endorsed by, sponsored by, or approved by **Campus Codeworks Zrt.** (formerly SDA Informatika Zrt.), the developers of the Neptun system, nor any educational institutions using it.<br>
+> The "Neptun" name, logo, and related trademarks are the property of their respective owners. They are used strictly for descriptive and nominative fair use purposes to indicate system compatibility.<br>
+> This application does not operate any intermediary proxy servers, nor does it collect, store, track, or share personal, authentication, or academic records with third parties. All network communication and authentication occur directly between your device and your institution's official servers over an encrypted (HTTPS) connection.<br>
+> The information displayed in this application is for informational purposes only. The official web interface of your institution's Neptun portal is the sole binding and authoritative source for all academic, course, and examination data. The developers assume no responsibility or liability for any missed deadlines, registration issues, system outages, or data discrepancies.<br>
+
 ## Features
 
 *   **Dashboard:** A sleek home screen that gives you a quick overview of your day, featuring daily class statistics and a live, calculating countdown to your next upcoming class.

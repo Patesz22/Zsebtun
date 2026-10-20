@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
+import 'package:zsebtun/main.dart';
 
 class AppearanceSettingsPage extends StatefulWidget {
   const AppearanceSettingsPage({super.key});
@@ -23,10 +23,10 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     if (_editDarkMode) {
       ZsebtunApp.seedColorDarkNotifier.value = color;
-      await prefs.setInt('seedColorDark', color.value);
+      await prefs.setInt('seedColorDark', color.toARGB32());
     } else {
       ZsebtunApp.seedColorLightNotifier.value = color;
-      await prefs.setInt('seedColorLight', color.value);
+      await prefs.setInt('seedColorLight', color.toARGB32());
     }
   }
 
@@ -62,7 +62,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                 ButtonSegment(value: true, icon: const Icon(Icons.dark_mode_rounded), label: Text(tr('dark_mode') == 'dark_mode' ? 'Dark Theme' : tr('dark_mode'))),
               ],
               selected: {_editDarkMode},
-              onSelectionChanged: (Set<bool> newSelection) {
+              onSelectionChanged: (newSelection) {
                 setState(() => _editDarkMode = newSelection.first);
               },
               style: SegmentedButton.styleFrom(
@@ -95,7 +95,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                   itemCount: _presetColors.length,
                   itemBuilder: (context, index) {
                     final color = _presetColors[index];
-                    final isSelected = currentColor.value == color.value;
+                    final isSelected = currentColor.toARGB32() == color.toARGB32();
 
                     return GestureDetector(
                       onTap: () => _updateColor(color),
@@ -106,7 +106,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                           shape: BoxShape.circle,
                           border: isSelected ? Border.all(color: theme.colorScheme.onSurface, width: 3) : null,
                           boxShadow: isSelected
-                              ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 8, spreadRadius: 2)]
+                              ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 2)]
                               : null,
                         ),
                         child: isSelected
@@ -145,7 +145,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                     child: const Icon(Icons.dark_mode_rounded, color: Colors.white),
                   ),
                   value: isAmoled,
-                  activeColor: theme.colorScheme.primary,
+                  activeThumbColor: theme.colorScheme.primary,
                   onChanged: _toggleAmoled,
                 );
               }
