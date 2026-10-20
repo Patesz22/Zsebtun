@@ -3,6 +3,8 @@
 ### Mobil órarend app, egyetemi Neptun tanulmányi rendszerhez.
 ### A modern mobile schedule application for the Neptun university system.
 
+[![Github All Releases](https://img.shields.io/github/downloads//Patesz22/Zsebtun//total.svg)]()
+
 ## Features
 
 *   **Dashboard:** A sleek home screen that gives you a quick overview of your day, featuring daily class statistics and a live, calculating countdown to your next upcoming class.
