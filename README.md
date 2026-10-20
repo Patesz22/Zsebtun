@@ -3,7 +3,7 @@
 ### Mobil órarend app, egyetemi Neptun tanulmányi rendszerhez.
 ### A modern mobile schedule application for the Neptun university system.
 
-[![Github All Releases](https://img.shields.io/github/downloads//Patesz22/Zsebtun//total.svg)]()
+[![Github All Releases](https://img.shields.io/github/downloads/Patesz22/Zsebtun/total.svg)]()
 
 ## Features
 
