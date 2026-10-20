@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
+import 'package:zsebtun/main.dart';
 
 class AppearanceSettingsPage extends StatefulWidget {
   const AppearanceSettingsPage({super.key});
@@ -62,7 +62,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                 ButtonSegment(value: true, icon: const Icon(Icons.dark_mode_rounded), label: Text(tr('dark_mode') == 'dark_mode' ? 'Dark Theme' : tr('dark_mode'))),
               ],
               selected: {_editDarkMode},
-              onSelectionChanged: (Set<bool> newSelection) {
+              onSelectionChanged: (newSelection) {
                 setState(() => _editDarkMode = newSelection.first);
               },
               style: SegmentedButton.styleFrom(

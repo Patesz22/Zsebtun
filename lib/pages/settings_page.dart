@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
-import '../database/db_helper.dart';
-import 'setup_page.dart';
-import '../services/github_update_service.dart';
-import 'settings_page_color_picker.dart';
+import 'package:zsebtun/database/db_helper.dart';
+import 'package:zsebtun/main.dart';
+import 'package:zsebtun/pages/settings_page_color_picker.dart';
+import 'package:zsebtun/pages/setup_page.dart';
+import 'package:zsebtun/services/github_update_service.dart';
 
 /// @description A dedicated settings page allowing users to configure theme, language,
 /// date and time formats, room naming, update checks, and debug simulation options.
@@ -120,7 +120,7 @@ class SettingsPage extends StatelessWidget {
                       DropdownMenuItem(value: 'hu', child: Text(tr('hungarian'), style: TextStyle(color: theme.colorScheme.onSurface))),
                       DropdownMenuItem(value: 'en', child: Text(tr('english'), style: TextStyle(color: theme.colorScheme.onSurface))),
                     ],
-                    onChanged: (String? newLang) async {
+                    onChanged: (newLang) async {
                       if (newLang != null) {
                         ZsebtunApp.languageNotifier.value = newLang;
                         final prefs = await SharedPreferences.getInstance();
@@ -160,7 +160,7 @@ class SettingsPage extends StatelessWidget {
                       DropdownMenuItem(value: 1, child: Text(tr('monday'), style: TextStyle(color: theme.colorScheme.onSurface))),
                       DropdownMenuItem(value: 0, child: Text(tr('sunday'), style: TextStyle(color: theme.colorScheme.onSurface))),
                     ],
-                    onChanged: (int? newDay) {
+                    onChanged: (newDay) {
                       if (newDay != null) {
                         ZsebtunApp.setFirstDayOfWeek(newDay);
                       }
@@ -198,7 +198,7 @@ class SettingsPage extends StatelessWidget {
                       DropdownMenuItem(value: true, child: Text(tr('format_24h'), style: TextStyle(color: theme.colorScheme.onSurface))),
                       DropdownMenuItem(value: false, child: Text(tr('format_12h'), style: TextStyle(color: theme.colorScheme.onSurface))),
                     ],
-                    onChanged: (bool? newVal) {
+                    onChanged: (newVal) {
                       if (newVal != null) {
                         ZsebtunApp.setUse24HourFormat(newVal);
                       }
@@ -238,7 +238,7 @@ class SettingsPage extends StatelessWidget {
                       DropdownMenuItem(value: 'dd.MM.yyyy', child: Text('dd.MM.yyyy', style: TextStyle(color: theme.colorScheme.onSurface))),
                       DropdownMenuItem(value: 'MM/dd/yyyy', child: Text('MM/dd/yyyy', style: TextStyle(color: theme.colorScheme.onSurface))),
                     ],
-                    onChanged: (String? newPattern) {
+                    onChanged: (newPattern) {
                       if (newPattern != null) {
                         ZsebtunApp.setDateFormat(newPattern);
                       }

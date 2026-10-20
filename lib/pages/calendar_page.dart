@@ -1,24 +1,24 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
-
-import '../main.dart';
-import '../database/db_helper.dart';
-import '../services/ics_parser_service.dart';
-import '../services/room_formatter_service.dart';
-import 'setup_page.dart';
-import 'settings_page.dart';
-import 'zh_add_edit_page.dart';
+import 'package:zsebtun/database/db_helper.dart';
+import 'package:zsebtun/main.dart';
+import 'package:zsebtun/pages/settings_page.dart';
+import 'package:zsebtun/pages/setup_page.dart';
+import 'package:zsebtun/pages/zh_add_edit_page.dart';
+import 'package:zsebtun/services/ics_parser_service.dart';
+import 'package:zsebtun/services/room_formatter_service.dart';
 
 /// @description The full schedule view that allows users to navigate through their
 /// classes and exams using a monthly, weekly, or daily view.
 class CalendarPage extends StatefulWidget {
-  final List<Map<String, dynamic>>? preloadedEvents;
 
   const CalendarPage({super.key, this.preloadedEvents});
+  final List<Map<String, dynamic>>? preloadedEvents;
 
   /// @description Creates the mutable state object for CalendarPage.
   @override
@@ -124,8 +124,8 @@ class _CalendarPageState extends State<CalendarPage> {
   /// @description Groups a flat list of events into a Map indexed by date for TableCalendar lookups.
   /// @param flatEvents A list of un-grouped event maps.
   void _groupEventsByDate(List<Map<String, dynamic>> flatEvents) {
-    Map<DateTime, List<Map<String, dynamic>>> newGroups = {};
-    for (var event in flatEvents) {
+    final newGroups = <DateTime, List<Map<String, dynamic>>>{};
+    for (final event in flatEvents) {
       final date = event['dtstart'] as DateTime;
       final dateKey = DateTime(date.year, date.month, date.day);
 
@@ -142,7 +142,7 @@ class _CalendarPageState extends State<CalendarPage> {
   /// @returns A list of events occurring on that day.
   List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
     final normalizedDay = DateTime(day.year, day.month, day.day);
-    return _groupedEvents[normalizedDay] ?? [];
+    return _groupedEvents[normalizedDay] ?? <Map<String, dynamic>>[];
   }
 
   /// @description Handles the calendar view format change (Daily, Weekly, Monthly).
@@ -165,7 +165,7 @@ class _CalendarPageState extends State<CalendarPage> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const SetupPage()),
+        MaterialPageRoute<void>(builder: (context) => const SetupPage()),
             (route) => false,
       );
     }
@@ -178,7 +178,7 @@ class _CalendarPageState extends State<CalendarPage> {
     Navigator.pop(context);
     final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<bool>(
         builder: (_) => ZhAddEditPage(
           existingEvent: event,
           preloadedSubjects: _preloadedSubjects,
@@ -208,13 +208,13 @@ class _CalendarPageState extends State<CalendarPage> {
         ? (event['color'] != null ? Color(event['color'] as int) : defaultZhColor)
         : theme.colorScheme.primary;
 
-    final className = event['className'] ?? tr('unknown_class');
+    final className = event['className']?.toString() ?? tr('unknown_class');
     final classType = event['classType']?.toString() ?? '';
     final eventType = event['eventType']?.toString() ?? '';
-    final roomsList = event['rooms'] as List<dynamic>? ?? [];
-    final teachers = event['teachers'] as List<dynamic>? ?? [];
+    final roomsList = (event['rooms'] as List<dynamic>?) ?? <dynamic>[];
+    final teachers = (event['teachers'] as List<dynamic>?) ?? <dynamic>[];
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: theme.colorScheme.surface,
       isScrollControlled: true,
@@ -224,7 +224,7 @@ class _CalendarPageState extends State<CalendarPage> {
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: ValueListenableBuilder<bool>(
               valueListenable: ZsebtunApp.newRoomsNotifier,
               builder: (context, useNewRooms, child) {
@@ -362,7 +362,9 @@ class _CalendarPageState extends State<CalendarPage> {
   /// @returns The complete scaffold widget.
   @override
   Widget build(BuildContext context) {
-    final selectedDayEvents = _selectedDay != null ? _getEventsForDay(_selectedDay!) : [];
+    final selectedDayEvents = _selectedDay != null
+        ? _getEventsForDay(_selectedDay!)
+        : <Map<String, dynamic>>[];
     final theme = Theme.of(context);
     final currentYear = DateTime.now().year;
 
@@ -393,7 +395,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 elevation: 3,
                 borderRadius: BorderRadius.circular(16),
                 onChanged: _onViewChanged,
-                items: ['daily', 'weekly', 'monthly'].map((String value) {
+                items: ['daily', 'weekly', 'monthly'].map((value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(tr(value), style: TextStyle(color: theme.colorScheme.onSurface)),
@@ -404,9 +406,9 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           IconButton(
             icon: Icon(Icons.settings_outlined, color: theme.colorScheme.onSurface),
-            onPressed: () => Navigator.push(
+            onPressed: () => Navigator.push<void>(
               context,
-              MaterialPageRoute(builder: (_) => const SettingsPage()),
+              MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
             ),
             tooltip: tr('settings'),
           ),
@@ -421,11 +423,11 @@ class _CalendarPageState extends State<CalendarPage> {
             ValueListenableBuilder<int>(
               valueListenable: ZsebtunApp.firstDayOfWeekNotifier,
               builder: (context, firstDayOfWeek, _) {
-                return Container(
+                return ColoredBox(
                   color: theme.colorScheme.surface,
-                  child: TableCalendar(
+                  child: TableCalendar<Map<String, dynamic>>(
                     locale: ZsebtunApp.localeString,
-                    firstDay: DateTime(currentYear - 3, 1, 1),
+                    firstDay: DateTime(currentYear - 3),
                     lastDay: DateTime(currentYear + 3, 12, 31),
                     focusedDay: _focusedDay,
                     calendarFormat: _calendarFormat,
@@ -440,7 +442,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       });
                     },
                     eventLoader: _getEventsForDay,
-                    calendarBuilders: CalendarBuilders(
+                    calendarBuilders: CalendarBuilders<Map<String, dynamic>>(
                       markerBuilder: (context, date, events) {
                         if (events.isEmpty) return null;
                         final maxVisibleDots = events.length > 5 ? 5 : events.length;
@@ -451,12 +453,11 @@ class _CalendarPageState extends State<CalendarPage> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: visibleEvents.map((e) {
-                              final map = e as Map<String, dynamic>;
-                              final isZh = map['isZh'] == 1 || map['classType'] == 'ZH';
+                            children: visibleEvents.map((eventMap) {
+                              final isZh = eventMap['isZh'] == 1 || eventMap['classType'] == 'ZH';
                               final dotColor = isZh
-                                  ? (map['color'] != null
-                                  ? Color(map['color'] as int)
+                                  ? (eventMap['color'] != null
+                                  ? Color(eventMap['color'] as int)
                                   : ZsebtunApp.zhColorNotifier.value)
                                   : theme.colorScheme.tertiary;
 
@@ -573,7 +574,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
 
           Expanded(
-            child: Container(
+            child: ColoredBox(
               color: theme.colorScheme.surfaceContainerLowest,
               child: selectedDayEvents.isEmpty
                   ? Center(
@@ -607,10 +608,10 @@ class _CalendarPageState extends State<CalendarPage> {
                           ? (event['color'] != null ? Color(event['color'] as int) : defaultZhColor)
                           : theme.colorScheme.primary;
 
-                      final className = event['className'] ?? tr('unknown_class');
+                      final className = event['className']?.toString() ?? tr('unknown_class');
                       final classType = event['classType']?.toString() ?? '';
                       final eventType = event['eventType']?.toString() ?? '';
-                      final roomsList = event['rooms'] as List<dynamic>? ?? [];
+                      final roomsList = (event['rooms'] as List<dynamic>?) ?? <dynamic>[];
 
                       final location = roomsList.isNotEmpty
                           ? roomsList.map((r) {
@@ -619,7 +620,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       }).join(', ')
                           : tr('unknown_room');
 
-                      final teachers = event['teachers'] as List<dynamic>? ?? [];
+                      final teachers = (event['teachers'] as List<dynamic>?) ?? <dynamic>[];
 
                       return Container(
                         decoration: BoxDecoration(

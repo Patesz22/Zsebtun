@@ -1,21 +1,22 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import '../main.dart';
-import '../database/db_helper.dart';
+import 'package:zsebtun/database/db_helper.dart';
+import 'package:zsebtun/main.dart';
 
 /// @description Form page to create or update an exam using localized date, time, and calendar options.
 class ZhAddEditPage extends StatefulWidget {
-  final Map<String, dynamic>? existingEvent;
-  final List<String>? preloadedSubjects;
 
   const ZhAddEditPage({
     super.key,
     this.existingEvent,
     this.preloadedSubjects,
   });
+  final Map<String, dynamic>? existingEvent;
+  final List<String>? preloadedSubjects;
 
+  /// @description Creates the state object for ZhAddEditPage.
   @override
   State<ZhAddEditPage> createState() => _ZhAddEditPageState();
 }
@@ -56,6 +57,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     Color(0xFF6D4C41), // Brown
   ];
 
+  /// @description Initializes text controllers, preloaded subjects, and parses existing event metadata.
   @override
   void initState() {
     super.initState();
@@ -66,7 +68,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
         : ZsebtunApp.zhColorNotifier.value;
 
     if (event != null) {
-      _nameController = TextEditingController(text: event['className'] ?? '');
+      _nameController = TextEditingController(text: event['className']?.toString() ?? '');
       _roomController = TextEditingController(text: _extractRoom(event['rooms']));
 
       final dtStart = _parseDate(event['dtstart']);
@@ -105,6 +107,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     }
   }
 
+  /// @description Disposes active text editing controllers.
   @override
   void dispose() {
     _nameController.dispose();
@@ -113,6 +116,8 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
   }
 
   /// @description Converts raw string, integer timestamp, or DateTime objects into a DateTime instance.
+  /// @param value Raw timestamp or string payload.
+  /// @returns Standardized DateTime instance.
   DateTime _parseDate(dynamic value) {
     if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
@@ -121,13 +126,15 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
   }
 
   /// @description Safely unpacks room descriptions from legacy JSON lists or plain text attributes.
+  /// @param roomsRaw Raw room JSON array or string.
+  /// @returns Formatted room string.
   String _extractRoom(dynamic roomsRaw) {
     if (roomsRaw == null) return '';
     try {
       if (roomsRaw is String && roomsRaw.startsWith('[')) {
         final decoded = jsonDecode(roomsRaw) as List<dynamic>;
         if (decoded.isNotEmpty) {
-          return decoded.first['raw']?.toString() ?? '';
+          return (decoded.first as Map<String, dynamic>)['raw']?.toString() ?? '';
         }
       }
     } catch (_) {}
@@ -301,6 +308,9 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
     }
   }
 
+  /// @description Builds the form scaffold containing fields for courses, exam types, and times.
+  /// @param context The build context.
+  /// @returns The form scaffold.
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -431,7 +441,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
                       title: Text(tr('start_time'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       subtitle: ValueListenableBuilder<bool>(
                         valueListenable: ZsebtunApp.use24HourFormatNotifier,
-                        builder: (context, _, __) {
+                        builder: (context, _, _) {
                           return Text(
                             ZsebtunApp.formatTimeOfDay(_startTime),
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -455,7 +465,7 @@ class _ZhAddEditPageState extends State<ZhAddEditPage> {
                       title: Text(tr('end_time'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       subtitle: ValueListenableBuilder<bool>(
                         valueListenable: ZsebtunApp.use24HourFormatNotifier,
-                        builder: (context, _, __) {
+                        builder: (context, _, _) {
                           return Text(
                             ZsebtunApp.formatTimeOfDay(_endTime),
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

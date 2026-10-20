@@ -1,11 +1,11 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import '../main.dart';
-import '../database/db_helper.dart';
-import '../services/room_formatter_service.dart';
-import 'zh_add_edit_page.dart';
+import 'package:zsebtun/database/db_helper.dart';
+import 'package:zsebtun/main.dart';
+import 'package:zsebtun/pages/zh_add_edit_page.dart';
+import 'package:zsebtun/services/room_formatter_service.dart';
 
 /// @description Displays all registered midterms and exams chronologically,
 /// using customized date patterns, time formats, and swipe-to-delete confirmation.
@@ -82,7 +82,7 @@ class _ZhListPageState extends State<ZhListPage> {
   /// @returns Formatted room string.
   String _formatRoom(dynamic roomsRaw, bool useNewRooms) {
     if (roomsRaw == null) return '';
-    List<dynamic> roomsList = [];
+    var roomsList = <dynamic>[];
     try {
       if (roomsRaw is List) {
         roomsList = roomsRaw;
@@ -201,7 +201,7 @@ class _ZhListPageState extends State<ZhListPage> {
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       itemCount: _zhEvents.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final event = _zhEvents[index];
                         final start = _parseDateTime(event['dtstart']);

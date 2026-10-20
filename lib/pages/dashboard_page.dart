@@ -1,24 +1,25 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../main.dart';
-import '../database/db_helper.dart';
-import '../services/ics_parser_service.dart';
-import 'calendar_page.dart';
-import 'settings_page.dart';
-import '../services/room_formatter_service.dart';
-import '../services/github_update_service.dart';
-import 'zh_list_page.dart';
+import 'package:zsebtun/database/db_helper.dart';
+import 'package:zsebtun/main.dart';
+import 'package:zsebtun/pages/calendar_page.dart';
+import 'package:zsebtun/pages/settings_page.dart';
+import 'package:zsebtun/pages/zh_list_page.dart';
+import 'package:zsebtun/services/github_update_service.dart';
+import 'package:zsebtun/services/ics_parser_service.dart';
+import 'package:zsebtun/services/room_formatter_service.dart';
 
 /// @description The main landing page of the application displaying current day statistics,
 /// a dynamic greeting, and an actively counting down hero card for the next upcoming class or exam.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
+  /// @description Creates the state instance for DashboardPage.
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
@@ -39,24 +40,24 @@ class _DashboardPageState extends State<DashboardPage> {
   /// @description Provides the simulated current time by applying the debug day offset.
   DateTime get _simulatedNow => DateTime.now().add(Duration(days: ZsebtunApp.debugDayOffsetNotifier.value));
 
+  /// @description Initializes timers, update checks, and listeners for debug offset changes.
   @override
   void initState() {
     super.initState();
     _initializeDashboard();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      GithubUpdateService.checkForUpdates(context, showUpToDateMessage: false);
+      GithubUpdateService.checkForUpdates(context);
     });
 
-    // Update the UI every minute to keep countdowns accurate
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) _calculateClasses();
     });
 
-    // Listen to debug offset changes to reload instantly
     ZsebtunApp.debugDayOffsetNotifier.addListener(_onDebugOffsetChanged);
   }
 
+  /// @description Cancels periodic timers and unregisters debug offset change listeners.
   @override
   void dispose() {
     _minuteTimer?.cancel();
@@ -64,6 +65,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
+  /// @description Handles simulated debug day offset modifications by reloading today's classes.
   void _onDebugOffsetChanged() {
     if (mounted) {
       setState(() => _isLoading = true);
@@ -131,7 +133,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _finishedClasses = 0;
     _totalClasses = _todayEvents.length;
 
-    for (var event in _todayEvents) {
+    for (final event in _todayEvents) {
       final startTime = event['dtstart'] as DateTime;
       final endTime = event['dtend'] as DateTime;
 
@@ -156,6 +158,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Calculates the formatted time remaining until a target DateTime.
+  /// @param target The future event start timestamp.
+  /// @returns Human-readable string representing remaining time.
   String _getTimeUntil(DateTime target) {
     final diff = target.difference(_simulatedNow);
     if (diff.isNegative) return tr('now');
@@ -170,10 +174,13 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Displays a bottom sheet showing all classes and exams scheduled for today.
+  /// @param theme The current application ThemeData.
+  /// @param isDark Whether dark mode is currently active.
+  /// @param useNewRooms Whether to format rooms with new room naming syntax.
   void _showTodayClassesBottomSheet(ThemeData theme, bool isDark, bool useNewRooms) {
     final zhColor = ZsebtunApp.zhColorNotifier.value;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: theme.colorScheme.surface,
@@ -222,11 +229,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       final event = _todayEvents[index];
                       final startTime = event['dtstart'] as DateTime;
                       final endTime = event['dtend'] as DateTime;
-                      final className = event['className'] ?? tr('unknown_class');
-                      final roomsList = event['rooms'] as List<dynamic>? ?? [];
+                      final className = event['className']?.toString() ?? tr('unknown_class');
+                      final roomsList = (event['rooms'] as List<dynamic>?) ?? <dynamic>[];
 
                       final location = roomsList.isNotEmpty
-                          ? roomsList.map((r) => useNewRooms ? r['raw'].toString() : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+                          ? roomsList.map((r) {
+                        final raw = r is Map ? (r['raw']?.toString() ?? '') : r.toString();
+                        return useNewRooms ? raw : RoomFormatterService.formatRoomName(raw);
+                      }).join(', ')
                           : tr('unknown_room');
 
                       final isFinished = _simulatedNow.isAfter(endTime);
@@ -252,7 +262,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  DateFormat('HH:mm').format(startTime),
+                                  ZsebtunApp.formatTime(startTime),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: isFinished
@@ -261,7 +271,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   ),
                                 ),
                                 Text(
-                                  DateFormat('HH:mm').format(endTime),
+                                  ZsebtunApp.formatTime(endTime),
                                   style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
                                 ),
                               ],
@@ -337,6 +347,9 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  /// @description Builds the scaffold containing navigation bars and switching stacks.
+  /// @param context The build context.
+  /// @returns The main dashboard scaffold.
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -352,7 +365,10 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.settings_outlined, color: theme.colorScheme.onSurface),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
+            onPressed: () => Navigator.push<void>(
+              context,
+              MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -370,7 +386,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (int index) {
+        onDestinationSelected: (index) {
           setState(() {
             _selectedIndex = index;
           });
@@ -402,8 +418,12 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Renders the dashboard list view containing the hero card and stat boxes.
+  /// @param theme Active application theme data.
+  /// @param isDark Whether dark theme is enabled.
+  /// @returns Refreshable dashboard scroll view.
   Widget _buildDashboardContent(ThemeData theme, bool isDark) {
     final now = _simulatedNow;
+    final weekday = DateFormat('EEEE', ZsebtunApp.localeString).format(now);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -420,7 +440,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            DateFormat(tr('date_format'), ZsebtunApp.localeString).format(now),
+            '${ZsebtunApp.formatDate(now)} ($weekday)',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
           ),
 
@@ -489,6 +509,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// @description Builds the hero card displaying either the currently running class,
   /// an upcoming midterm with the custom ZH color, or the next immediate class.
+  /// @param theme The current application theme.
+  /// @param isDark Whether dark mode is enabled.
+  /// @param useNewRooms Whether to format rooms with new room naming syntax.
+  /// @returns Widget card representing the active or upcoming scheduled item.
   Widget _buildHeroCard(ThemeData theme, bool isDark, bool useNewRooms) {
     final isRunning = _currentClass != null;
     final heroEvent = _currentClass ?? _nextClass;
@@ -517,13 +541,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final startTime = heroEvent['dtstart'] as DateTime;
     final endTime = heroEvent['dtend'] as DateTime;
-    final className = heroEvent['className'] ?? tr('unknown_class');
-    final roomsList = heroEvent['rooms'] as List<dynamic>? ?? [];
+    final className = heroEvent['className']?.toString() ?? tr('unknown_class');
+    final roomsList = (heroEvent['rooms'] as List<dynamic>?) ?? <dynamic>[];
 
     final location = roomsList.isNotEmpty
-        ? roomsList.map((r) => useNewRooms
-        ? r['raw'].toString()
-        : RoomFormatterService.formatRoomName(r['raw'].toString())).join(', ')
+        ? roomsList.map((r) {
+      final raw = r is Map ? (r['raw']?.toString() ?? '') : r.toString();
+      return useNewRooms ? raw : RoomFormatterService.formatRoomName(raw);
+    }).join(', ')
         : tr('unknown_room');
 
     final classType = heroEvent['classType']?.toString() ?? '';
@@ -586,7 +611,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
               Text(
-                '${DateFormat('HH:mm').format(startTime)} - ${DateFormat('HH:mm').format(endTime)}',
+                '${ZsebtunApp.formatTime(startTime)} - ${ZsebtunApp.formatTime(endTime)}',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
               ),
             ],
@@ -630,6 +655,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Builds the right stat box tracking the next immediate scheduled item.
+  /// @param theme Active application theme data.
+  /// @param isDark Whether dark theme is enabled.
+  /// @returns Widget representing next class summary.
   Widget _buildRightStatBox(ThemeData theme, bool isDark) {
     if (_nextClass == null) {
       return _buildStatBox(
@@ -643,7 +671,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     final startTime = _nextClass!['dtstart'] as DateTime;
-    final className = _nextClass!['className'] ?? '';
+    final className = _nextClass!['className']?.toString() ?? '';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -657,8 +685,8 @@ class _DashboardPageState extends State<DashboardPage> {
           Icon(Icons.fast_forward_rounded, color: theme.colorScheme.onTertiaryContainer),
           const SizedBox(height: 16),
           Text(
-            DateFormat('HH:mm').format(startTime),
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: theme.colorScheme.onTertiaryContainer),
+            ZsebtunApp.formatTime(startTime),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.colorScheme.onTertiaryContainer),
           ),
           const SizedBox(height: 4),
           Text(
@@ -673,6 +701,14 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   /// @description Builds a square statistics box used for displaying daily metrics.
+  /// @param theme Active application theme data.
+  /// @param title Metric label string.
+  /// @param value Big metric value string.
+  /// @param icon Leading icon data.
+  /// @param color Container background color.
+  /// @param onColor Foreground content color.
+  /// @param onTap Optional click event callback.
+  /// @returns Reusable stat box widget.
   Widget _buildStatBox({
     required ThemeData theme,
     required String title,
